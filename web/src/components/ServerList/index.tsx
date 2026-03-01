@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useGroups } from '../../hooks/useGroups'
-import { useServers } from '../../hooks/useServers'
+import { useServers, useDeleteServer } from '../../hooks/useServers'
 import { useUIStore } from '../../stores/uiStore'
 import type { Server, ServerGroup } from '../../types'
 import GroupManager from './GroupManager'
+import ServerContextMenu from './ServerContextMenu'
 import './ServerList.css'
 
 /** Props for the ServerList component */
@@ -61,6 +62,7 @@ function groupServersByGroup(
 function ServerList({ onServerConnect }: ServerListProps) {
   const { data: groups = [], isLoading: groupsLoading } = useGroups()
   const { data: servers = [], isLoading: serversLoading } = useServers()
+  const deleteServer = useDeleteServer()
   const openSettings = useUIStore((state) => state.openSettings)
   const openServerForm = useUIStore((state) => state.openServerForm)
 
@@ -91,6 +93,14 @@ function ServerList({ onServerConnect }: ServerListProps) {
   const handleServerClick = (server: Server) => {
     setSelectedServerId(server.id)
     onServerConnect?.(server)
+  }
+
+  const handleServerEdit = (server: Server) => {
+    openServerForm(server.id)
+  }
+
+  const handleServerDelete = (server: Server) => {
+    deleteServer.mutate(server.id)
   }
 
   const isGroupCollapsed = (groupId: string | null) => {
@@ -195,29 +205,35 @@ function ServerList({ onServerConnect }: ServerListProps) {
               {!isCollapsed && (
                 <div className="server-group-content">
                   {groupServers.map((server) => (
-                    <button
+                    <ServerContextMenu
                       key={server.id}
-                      type="button"
-                      className={`server-item ${selectedServerId === server.id ? 'selected' : ''}`}
-                      onClick={() => handleServerClick(server)}
-                      aria-pressed={selectedServerId === server.id}
-                      aria-label={`Select server ${server.label}`}
+                      server={server}
+                      onEdit={handleServerEdit}
+                      onDelete={handleServerDelete}
                     >
-                      <span
-                        className="server-status-icon"
-                        aria-label={
-                          server.last_connected_at
-                            ? 'Previously connected'
-                            : 'Never connected'
-                        }
+                      <button
+                        type="button"
+                        className={`server-item ${selectedServerId === server.id ? 'selected' : ''}`}
+                        onClick={() => handleServerClick(server)}
+                        aria-pressed={selectedServerId === server.id}
+                        aria-label={`Select server ${server.label}`}
                       >
-                        {server.last_connected_at ? '🟢' : '⚪'}
-                      </span>
-                      <div className="server-info">
-                        <span className="server-label">{server.label}</span>
-                        <span className="server-host">{server.host}</span>
-                      </div>
-                    </button>
+                        <span
+                          className="server-status-icon"
+                          aria-label={
+                            server.last_connected_at
+                              ? 'Previously connected'
+                              : 'Never connected'
+                          }
+                        >
+                          {server.last_connected_at ? '🟢' : '⚪'}
+                        </span>
+                        <div className="server-info">
+                          <span className="server-label">{server.label}</span>
+                          <span className="server-host">{server.host}</span>
+                        </div>
+                      </button>
+                    </ServerContextMenu>
                   ))}
                 </div>
               )}
