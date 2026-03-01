@@ -2,6 +2,7 @@
 
 from llm_shell.db.database import Database
 from llm_shell.models.settings import SettingsAllOut, SettingsUpdate
+from llm_shell.services.security import delete_secret, get_secret, store_secret
 
 
 class SettingsService:
@@ -40,7 +41,7 @@ class SettingsService:
             output_buffer=settings_dict["output_buffer"],
             context_lines=settings_dict["context_lines"],
             max_chat_rounds=settings_dict["max_chat_rounds"],
-            api_key_masked=api_key_masked,
+            api_key=api_key_masked,
         )
 
     async def update(self, data: SettingsUpdate) -> SettingsAllOut:
@@ -67,24 +68,15 @@ class SettingsService:
 
     def _store_api_key(self, api_key: str) -> None:
         """Store API key in keyring."""
-        import keyring
-
-        keyring.set_password("llm-shell", "api_key", api_key)
+        store_secret("api_key", api_key)
 
     def _delete_api_key(self) -> None:
         """Delete API key from keyring."""
-        import keyring
-
-        try:
-            keyring.delete_password("llm-shell", "api_key")
-        except keyring.errors.PasswordNotFoundError:
-            pass
+        delete_secret("api_key")
 
     async def _get_masked_api_key(self) -> str:
         """Get masked API key from keyring."""
-        import keyring
-
-        api_key = keyring.get_password("llm-shell", "api_key")
+        api_key = get_secret("api_key")
         if not api_key:
             return ""
 

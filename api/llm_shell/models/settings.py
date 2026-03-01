@@ -14,7 +14,7 @@ class SettingsAllOut(BaseModel):
     output_buffer: str
     context_lines: str
     max_chat_rounds: str
-    api_key_masked: str = ""  # Masked API key (e.g., "sk-***abcd")
+    api_key: str = ""  # Masked API key (e.g., "sk-***abcd")
 
 
 class SettingsUpdate(BaseModel):
