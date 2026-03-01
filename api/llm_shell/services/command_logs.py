@@ -73,23 +73,45 @@ class CommandLogsService:
         server_id: str,
         offset: int,
         limit: int,
+        source: CommandSource | None = None,
     ) -> list[CommandLogOut]:
-        """Get command logs for a server with pagination."""
-        rows = await self._db.fetchall(
-            """
-            SELECT * FROM command_logs
-            WHERE server_id = ?
-            ORDER BY executed_at DESC
-            LIMIT ? OFFSET ?
-            """,
-            (server_id, limit, offset),
-        )
+        """Get command logs for a server with pagination and optional source filter."""
+        if source:
+            rows = await self._db.fetchall(
+                """
+                SELECT * FROM command_logs
+                WHERE server_id = ? AND source = ?
+                ORDER BY executed_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (server_id, source.value, limit, offset),
+            )
+        else:
+            rows = await self._db.fetchall(
+                """
+                SELECT * FROM command_logs
+                WHERE server_id = ?
+                ORDER BY executed_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (server_id, limit, offset),
+            )
         return [self._row_to_out(row) for row in rows]
 
-    async def count_by_server(self, server_id: str) -> int:
-        """Count total command logs for a server."""
-        row = await self._db.fetchone(
-            "SELECT COUNT(*) as count FROM command_logs WHERE server_id = ?",
-            (server_id,),
-        )
+    async def count_by_server(
+        self,
+        server_id: str,
+        source: CommandSource | None = None,
+    ) -> int:
+        """Count total command logs for a server with optional source filter."""
+        if source:
+            row = await self._db.fetchone(
+                "SELECT COUNT(*) as count FROM command_logs WHERE server_id = ? AND source = ?",
+                (server_id, source.value),
+            )
+        else:
+            row = await self._db.fetchone(
+                "SELECT COUNT(*) as count FROM command_logs WHERE server_id = ?",
+                (server_id,),
+            )
         return row["count"] if row else 0

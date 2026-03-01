@@ -16,3 +16,10 @@ class CommandLogOut(BaseModel):
     risk_level: RiskLevel | None = None
     source: CommandSource
     executed_at: str
+
+
+class CommandLogListResponse(BaseModel):
+    """Paginated command log list response."""
+
+    items: list[CommandLogOut]
+    total: int

@@ -1,6 +1,7 @@
-"""Tests for CommandLog database functions."""
+"""Tests for CommandLog database functions and API."""
 
 import pytest
+from httpx import Client
 
 from llm_shell.db.database import Database
 from llm_shell.models.common import CommandSource, RiskLevel
@@ -339,3 +340,188 @@ class TestCommandLogsCountByServer:
 
         assert count1 == 3
         assert count2 == 5
+
+
+class TestCommandLogsAPI:
+    """Tests for CommandLog API endpoint."""
+
+    def _create_server(self, client: Client) -> str:
+        """Helper to create a test server and return its ID."""
+        response = client.post(
+            "/api/servers",
+            json={
+                "label": "Test Server",
+                "host": "test.example.com",
+                "username": "testuser",
+                "auth_type": "password",
+                "password": "testpass",
+            },
+        )
+        return response.json()["id"]
+
+    def _create_command_log(
+        self,
+        client: Client,
+        server_id: str,
+        command: str,
+        source: str = "manual",
+    ) -> None:
+        """Helper to create a command log directly in the database."""
+        from llm_shell.main import app
+        from llm_shell.api.servers import get_servers_service
+        from llm_shell.db.database import Database
+        import asyncio
+        import uuid
+        from datetime import UTC, datetime
+
+        service = app.dependency_overrides[get_servers_service]()
+        db: Database = service._db
+
+        log_id = str(uuid.uuid4())
+        now = datetime.now(UTC).isoformat()
+
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(
+                db.execute(
+                    """
+                    INSERT INTO command_logs (
+                        id, server_id, session_id, command, source, executed_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (log_id, server_id, "test-session", command, source, now),
+                )
+            )
+            loop.run_until_complete(db.commit())
+        finally:
+            loop.close()
+
+    def test_list_commands_returns_200_with_items_and_total(
+        self, client: Client
+    ) -> None:
+        """Test GET /api/servers/{server_id}/commands returns 200 with {items: [...], total: N}."""
+        server_id = self._create_server(client)
+        self._create_command_log(client, server_id, "ls -la")
+        self._create_command_log(client, server_id, "pwd")
+
+        response = client.get(f"/api/servers/{server_id}/commands")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert "total" in data
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
+
+    def test_list_commands_default_pagination(self, client: Client) -> None:
+        """Test that limit defaults to 50 and offset defaults to 0."""
+        server_id = self._create_server(client)
+        # Create 2 logs
+        self._create_command_log(client, server_id, "cmd1")
+        self._create_command_log(client, server_id, "cmd2")
+
+        response = client.get(f"/api/servers/{server_id}/commands")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
+
+    def test_list_commands_pagination_with_offset(self, client: Client) -> None:
+        """Test pagination with offset parameter."""
+        server_id = self._create_server(client)
+        # Create 5 logs
+        for i in range(5):
+            self._create_command_log(client, server_id, f"cmd-{i}")
+
+        # Get with offset=2
+        response = client.get(f"/api/servers/{server_id}/commands?offset=2")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 5  # Total is still 5
+        assert len(data["items"]) == 3  # But only 3 items returned
+
+    def test_list_commands_pagination_with_limit(self, client: Client) -> None:
+        """Test pagination with limit parameter."""
+        server_id = self._create_server(client)
+        # Create 5 logs
+        for i in range(5):
+            self._create_command_log(client, server_id, f"cmd-{i}")
+
+        # Get with limit=2
+        response = client.get(f"/api/servers/{server_id}/commands?limit=2")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 5  # Total is still 5
+        assert len(data["items"]) == 2  # But only 2 items returned
+
+    def test_list_commands_max_limit_100(self, client: Client) -> None:
+        """Test that limit cannot exceed 100."""
+        server_id = self._create_server(client)
+        # Create 5 logs
+        for i in range(5):
+            self._create_command_log(client, server_id, f"cmd-{i}")
+
+        # Request with limit=200 should be rejected with 422
+        response = client.get(f"/api/servers/{server_id}/commands?limit=200")
+
+        assert response.status_code == 422  # Validation error for limit > 100
+
+        # But limit=100 should work
+        response = client.get(f"/api/servers/{server_id}/commands?limit=100")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) == 5
+
+    def test_list_commands_source_filter(self, client: Client) -> None:
+        """Test filtering by source parameter."""
+        server_id = self._create_server(client)
+        # Create logs with different sources
+        self._create_command_log(client, server_id, "manual-cmd-1", "manual")
+        self._create_command_log(client, server_id, "manual-cmd-2", "manual")
+        self._create_command_log(client, server_id, "ai-cmd-1", "ai")
+
+        # Filter by source=manual
+        response = client.get(f"/api/servers/{server_id}/commands?source=manual")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
+        for item in data["items"]:
+            assert item["source"] == "manual"
+
+        # Filter by source=ai
+        response = client.get(f"/api/servers/{server_id}/commands?source=ai")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert len(data["items"]) == 1
+        assert data["items"][0]["source"] == "ai"
+
+    def test_list_commands_returns_404_for_non_existent_server(
+        self, client: Client
+    ) -> None:
+        """Test that 404 is returned if server_id does not exist."""
+        response = client.get("/api/servers/non-existent-server-id/commands")
+
+        assert response.status_code == 404
+        error = response.json()["detail"]["error"]
+        assert error["code"] == "NOT_FOUND"
+
+    def test_list_commands_empty_for_server_with_no_logs(
+        self, client: Client
+    ) -> None:
+        """Test that empty items list is returned for server with no logs."""
+        server_id = self._create_server(client)
+
+        response = client.get(f"/api/servers/{server_id}/commands")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0
+        assert data["items"] == []

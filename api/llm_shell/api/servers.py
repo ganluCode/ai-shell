@@ -6,7 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from llm_shell.db.database import Database, get_database
 from llm_shell.exceptions import NotFoundError
+from llm_shell.models.command_logs import CommandLogListResponse
+from llm_shell.models.common import CommandSource
 from llm_shell.models.servers import ServerCreate, ServerOut, ServerUpdate
+from llm_shell.services.command_logs import CommandLogsService
 from llm_shell.services.servers import ServersService
 
 router = APIRouter()
@@ -15,6 +18,13 @@ router = APIRouter()
 def get_servers_service(db: Annotated[Database, Depends(get_database)]) -> ServersService:
     """Get servers service instance."""
     return ServersService(db)
+
+
+def get_command_logs_service(
+    db: Annotated[Database, Depends(get_database)],
+) -> CommandLogsService:
+    """Get command logs service instance."""
+    return CommandLogsService(db)
 
 
 @router.get("/servers", response_model=list[ServerOut])
@@ -74,3 +84,37 @@ async def delete_server(
         await service.delete(server_id)
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=e.to_dict())
+
+
+@router.get(
+    "/servers/{server_id}/commands",
+    response_model=CommandLogListResponse,
+)
+async def list_server_commands(
+    server_id: str,
+    servers_service: Annotated[ServersService, Depends(get_servers_service)],
+    command_logs_service: Annotated[
+        CommandLogsService, Depends(get_command_logs_service)
+    ],
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    source: CommandSource | None = None,
+) -> CommandLogListResponse:
+    """List command logs for a server with pagination and optional source filter."""
+    # Check if server exists (raises NotFoundError if not)
+    try:
+        await servers_service.get_by_id(server_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=e.to_dict()) from None
+
+    items = await command_logs_service.get_by_server(
+        server_id=server_id,
+        offset=offset,
+        limit=limit,
+        source=source,
+    )
+    total = await command_logs_service.count_by_server(
+        server_id=server_id,
+        source=source,
+    )
+    return CommandLogListResponse(items=items, total=total)

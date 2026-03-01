@@ -45,14 +45,18 @@ def client(test_db: Database) -> Generator[TestClient, None, None]:
     """Create test HTTP client."""
     from llm_shell.api.groups import get_groups_service
     from llm_shell.api.keypairs import get_keypairs_service
-    from llm_shell.api.servers import get_servers_service
+    from llm_shell.api.servers import get_command_logs_service, get_servers_service
     from llm_shell.api.settings import get_settings_service
+    from llm_shell.services.command_logs import CommandLogsService
 
     # Override service dependencies directly
     app.dependency_overrides[get_groups_service] = lambda: GroupsService(test_db)
     app.dependency_overrides[get_keypairs_service] = lambda: KeyPairsService(test_db)
     app.dependency_overrides[get_servers_service] = lambda: ServersService(test_db)
     app.dependency_overrides[get_settings_service] = lambda: SettingsService(test_db)
+    app.dependency_overrides[get_command_logs_service] = lambda: CommandLogsService(
+        test_db
+    )
 
     with TestClient(app=app, raise_server_exceptions=False) as ac:
         yield ac
