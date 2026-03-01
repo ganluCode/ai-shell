@@ -119,7 +119,7 @@ class KeyPairsService:
 
         try:
             keyring.delete_password("llm-shell", f"keypair:{keypair_id}")
-        except keyring.errors.PasswordNotFoundError:
+        except keyring.errors.PasswordDeleteError:
             pass  # Password doesn't exist, that's fine
 
     async def get_passphrase(self, keypair_id: str) -> str | None:
