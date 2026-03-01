@@ -2,6 +2,7 @@ import ServerList from './components/ServerList'
 import ServerForm from './components/ServerList/ServerForm'
 import Terminal from './components/Terminal'
 import AiChat from './components/AiChat'
+import Settings from './components/Settings/Settings'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         </div>
       </main>
       <ServerForm />
+      <Settings />
     </div>
   )
 }
