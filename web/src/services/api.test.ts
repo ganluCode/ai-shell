@@ -428,6 +428,7 @@ describe('api', () => {
       output_buffer: '1000',
       context_lines: '50',
       max_chat_rounds: '10',
+      api_key: 'sk-***test',
     }
 
     beforeEach(() => {

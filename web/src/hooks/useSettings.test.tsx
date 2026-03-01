@@ -34,6 +34,7 @@ describe('useSettings', () => {
     output_buffer: '10000',
     context_lines: '50',
     max_chat_rounds: '10',
+    api_key: 'sk-***test',
   }
 
   beforeEach(() => {

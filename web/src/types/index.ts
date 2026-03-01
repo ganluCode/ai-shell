@@ -81,6 +81,8 @@ export interface Settings {
   output_buffer: string;
   context_lines: string;
   max_chat_rounds: string;
+  /** Masked API key (e.g., "sk-***abcd") or empty string if not configured */
+  api_key: string;
 }
 
 // ============================================================================
