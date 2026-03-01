@@ -1,6 +1,8 @@
 """Server models."""
 
-from pydantic import BaseModel, Field, field_validator
+from typing import Self
+
+from pydantic import BaseModel, Field, model_validator
 
 from llm_shell.models.common import AuthType
 
@@ -27,21 +29,14 @@ class ServerCreate(ServerBase):
 
     password: str | None = None  # For auth_type=password, stored in keyring
 
-    @field_validator("key_id")
-    @classmethod
-    def validate_key_auth(cls, v: str | None, info) -> str | None:
-        """Validate that key_id is provided when auth_type is key."""
-        if info.data.get("auth_type") == AuthType.KEY and not v:
+    @model_validator(mode="after")
+    def validate_auth(self) -> Self:
+        """Validate that auth credentials match auth_type."""
+        if self.auth_type == AuthType.KEY and not self.key_id:
             raise ValueError("key_id is required when auth_type is 'key'")
-        return v
-
-    @field_validator("password")
-    @classmethod
-    def validate_password_auth(cls, v: str | None, info) -> str | None:
-        """Validate that password is provided when auth_type is password."""
-        if info.data.get("auth_type") == AuthType.PASSWORD and not v:
+        if self.auth_type == AuthType.PASSWORD and not self.password:
             raise ValueError("password is required when auth_type is 'password'")
-        return v
+        return self
 
 
 class ServerUpdate(ServerBase):
