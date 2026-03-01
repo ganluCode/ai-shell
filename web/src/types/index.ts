@@ -183,6 +183,20 @@ export interface SSHConfigImportResult {
 }
 
 // ============================================================================
+// Session Interface
+// ============================================================================
+
+/** Terminal session connection status */
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
+
+/** Terminal session for a server connection */
+export interface Session {
+  id: string;
+  server_id: string;
+  status: ConnectionStatus;
+}
+
+// ============================================================================
 // Error Interface
 // ============================================================================
 
