@@ -16,14 +16,6 @@ from llm_shell.services.servers import ServersService
 from llm_shell.services.settings import SettingsService
 
 
-@pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
-    """Create event loop for async tests."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
 @pytest.fixture
 def test_settings(tmp_path: Path) -> Settings:
     """Create test settings with temporary database."""
@@ -39,9 +31,13 @@ def test_settings(tmp_path: Path) -> Settings:
 def test_db(test_settings: Settings) -> Generator[Database, None, None]:
     """Create test database."""
     db = Database(test_settings.database_path)
-    asyncio.get_event_loop().run_until_complete(db.connect())
-    yield db
-    asyncio.get_event_loop().run_until_complete(db.close())
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(db.connect())
+        yield db
+    finally:
+        loop.run_until_complete(db.close())
+        loop.close()
 
 
 @pytest.fixture
