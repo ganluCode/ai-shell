@@ -1,5 +1,7 @@
 """Tests for SSH keypairs API."""
 
+from unittest.mock import MagicMock, patch
+
 from httpx import Client
 
 
@@ -227,3 +229,73 @@ class TestKeyPairsAPI:
         assert server_check_response.status_code == 200
         server_data = server_check_response.json()
         assert server_data["key_id"] is None
+
+
+class TestKeyringIntegration:
+    """Tests for keyring integration with keypairs."""
+
+    @patch("llm_shell.services.keypairs.security.store_secret")
+    def test_create_keypair_stores_passphrase_in_keyring(
+        self, mock_store_secret: MagicMock, client: Client
+    ) -> None:
+        """Test that creating keypair with passphrase stores it in keyring with key 'passphrase:{keypair_id}'."""
+        mock_store_secret.return_value = True
+
+        response = client.post(
+            "/api/keypairs",
+            json={
+                "label": "Secure Key",
+                "private_key_path": "/home/user/.ssh/secure_key",
+                "passphrase": "my-secret-passphrase",
+            },
+        )
+        assert response.status_code == 201
+        keypair_id = response.json()["id"]
+
+        # Verify store_secret was called with correct key pattern
+        mock_store_secret.assert_called_once_with(
+            f"passphrase:{keypair_id}", "my-secret-passphrase"
+        )
+
+    @patch("llm_shell.services.keypairs.security.store_secret")
+    def test_create_keypair_without_passphrase_does_not_call_keyring(
+        self, mock_store_secret: MagicMock, client: Client
+    ) -> None:
+        """Test that creating keypair without passphrase does not call keyring."""
+        response = client.post(
+            "/api/keypairs",
+            json={
+                "label": "Insecure Key",
+                "private_key_path": "/home/user/.ssh/insecure_key",
+            },
+        )
+        assert response.status_code == 201
+
+        # Verify store_secret was not called
+        mock_store_secret.assert_not_called()
+
+    @patch("llm_shell.services.keypairs.security.delete_secret")
+    def test_delete_keypair_removes_passphrase_from_keyring(
+        self, mock_delete_secret: MagicMock, client: Client
+    ) -> None:
+        """Test that deleting keypair removes passphrase from keyring."""
+        mock_delete_secret.return_value = True
+
+        # Create a keypair with passphrase
+        response = client.post(
+            "/api/keypairs",
+            json={
+                "label": "To Delete",
+                "private_key_path": "/home/user/.ssh/to_delete",
+                "passphrase": "passphrase-to-delete",
+            },
+        )
+        assert response.status_code == 201
+        keypair_id = response.json()["id"]
+
+        # Delete the keypair
+        delete_response = client.delete(f"/api/keypairs/{keypair_id}")
+        assert delete_response.status_code == 204
+
+        # Verify delete_secret was called with correct key pattern
+        mock_delete_secret.assert_called_once_with(f"passphrase:{keypair_id}")

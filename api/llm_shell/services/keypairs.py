@@ -7,6 +7,7 @@ from typing import Any
 from llm_shell.db.database import Database
 from llm_shell.exceptions import NotFoundError
 from llm_shell.models.keypairs import KeyPairCreate, KeyPairOut, KeyPairUpdate
+from llm_shell.services import security
 
 
 class KeyPairsService:
@@ -109,21 +110,12 @@ class KeyPairsService:
 
     def _store_passphrase(self, keypair_id: str, passphrase: str) -> None:
         """Store passphrase in keyring."""
-        import keyring
-
-        keyring.set_password("llm-shell", f"keypair:{keypair_id}", passphrase)
+        security.store_secret(f"passphrase:{keypair_id}", passphrase)
 
     def _delete_passphrase(self, keypair_id: str) -> None:
         """Delete passphrase from keyring."""
-        import keyring
-
-        try:
-            keyring.delete_password("llm-shell", f"keypair:{keypair_id}")
-        except keyring.errors.PasswordDeleteError:
-            pass  # Password doesn't exist, that's fine
+        security.delete_secret(f"passphrase:{keypair_id}")
 
     async def get_passphrase(self, keypair_id: str) -> str | None:
         """Get passphrase from keyring."""
-        import keyring
-
-        return keyring.get_password("llm-shell", f"keypair:{keypair_id}")
+        return security.get_secret(f"passphrase:{keypair_id}")
