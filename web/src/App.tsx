@@ -1,25 +1,25 @@
+import ServerList from './components/ServerList'
+import Terminal from './components/Terminal'
+import AiChat from './components/AiChat'
+
 function App() {
   return (
     <div className="app">
       <header className="app-header">
         <h1>LLM Shell</h1>
-        <span style={{ color: 'var(--fg-muted)' }}>Settings</span>
+        <button className="settings-button" aria-label="Settings">
+          Settings
+        </button>
       </header>
       <main className="app-main">
         <div className="column column-left">
-          <div style={{ padding: 'var(--spacing-md)', color: 'var(--fg-secondary)' }}>
-            ServerList
-          </div>
+          <ServerList />
         </div>
         <div className="column column-middle">
-          <div style={{ padding: 'var(--spacing-md)', color: 'var(--fg-secondary)' }}>
-            Terminal
-          </div>
+          <Terminal />
         </div>
         <div className="column column-right">
-          <div style={{ padding: 'var(--spacing-md)', color: 'var(--fg-secondary)' }}>
-            AiChat
-          </div>
+          <AiChat />
         </div>
       </main>
     </div>

@@ -198,3 +198,80 @@ body {
   background-color: var(--accent-primary);
   color: var(--bg-primary);
 }
+
+/* ============================================
+   Header Settings Button
+   ============================================ */
+.settings-button {
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: 4px;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.settings-button:hover {
+  color: var(--fg-primary);
+  background-color: var(--bg-hover);
+}
+
+/* ============================================
+   ServerList Component
+   ============================================ */
+.server-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.server-list-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--fg-secondary);
+  font-size: var(--font-size-md);
+}
+
+/* ============================================
+   Terminal Component
+   ============================================ */
+.terminal {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.terminal-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--fg-secondary);
+  font-size: var(--font-size-md);
+}
+
+/* ============================================
+   AiChat Component
+   ============================================ */
+.ai-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.ai-chat-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--fg-secondary);
+  font-size: var(--font-size-md);
+}
