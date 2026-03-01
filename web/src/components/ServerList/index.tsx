@@ -3,6 +3,7 @@ import { useGroups } from '../../hooks/useGroups'
 import { useServers } from '../../hooks/useServers'
 import { useUIStore } from '../../stores/uiStore'
 import type { Server, ServerGroup } from '../../types'
+import GroupManager from './GroupManager'
 import './ServerList.css'
 
 /** Props for the ServerList component */
@@ -155,25 +156,41 @@ function ServerList({ onServerConnect }: ServerListProps) {
         {groupedServers.map(({ group, servers: groupServers }) => {
           const groupId = group?.id || null
           const groupKey = groupId || 'ungrouped'
-          const groupName = group?.name || 'Ungrouped'
-          const groupColor = group?.color || undefined
           const isCollapsed = isGroupCollapsed(groupId)
+
+          // Skip rendering "Ungrouped" header if there are no ungrouped servers
+          if (!group && groupServers.length === 0) {
+            return null
+          }
 
           return (
             <div key={groupKey} className="server-group">
-              <button
-                type="button"
-                className="server-group-header"
-                onClick={() => toggleGroup(groupId)}
-                aria-expanded={!isCollapsed}
-                aria-label={`Toggle ${groupName} group`}
-                style={groupColor ? { borderLeftColor: groupColor } : undefined}
-              >
-                <span className="server-group-name">{groupName}</span>
-                <span className="server-group-toggle" aria-hidden="true">
-                  {isCollapsed ? '▶' : '▼'}
-                </span>
-              </button>
+              {group ? (
+                <GroupManager
+                  group={group}
+                  servers={groupServers}
+                  onClick={() => toggleGroup(groupId)}
+                  isCollapsed={isCollapsed}
+                  onContextMenuChange={() => {}}
+                >
+                  <span className="server-group-toggle" aria-hidden="true">
+                    {isCollapsed ? '▶' : '▼'}
+                  </span>
+                </GroupManager>
+              ) : (
+                <button
+                  type="button"
+                  className="server-group-header"
+                  onClick={() => toggleGroup(groupId)}
+                  aria-expanded={!isCollapsed}
+                  aria-label="Toggle Ungrouped section"
+                >
+                  <span className="server-group-name">Ungrouped</span>
+                  <span className="server-group-toggle" aria-hidden="true">
+                    {isCollapsed ? '▶' : '▼'}
+                  </span>
+                </button>
+              )}
 
               {!isCollapsed && (
                 <div className="server-group-content">
@@ -207,6 +224,9 @@ function ServerList({ onServerConnect }: ServerListProps) {
             </div>
           )
         })}
+
+        {/* Add group button at the bottom */}
+        <GroupManager group={null} onContextMenuChange={() => {}} />
       </div>
     </div>
   )
