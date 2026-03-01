@@ -188,3 +188,42 @@ class TestKeyPairsAPI:
         """Test deleting a non-existent keypair."""
         response = client.delete("/api/keypairs/non-existent-id")
         assert response.status_code == 404
+
+    def test_delete_keypair_sets_servers_key_id_to_null(self, client: Client) -> None:
+        """Test that deleting a keypair sets related servers' key_id to NULL."""
+        # Create a keypair
+        keypair_response = client.post(
+            "/api/keypairs",
+            json={
+                "label": "Test Key",
+                "private_key_path": "/home/user/.ssh/test_key",
+            },
+        )
+        assert keypair_response.status_code == 201
+        keypair_id = keypair_response.json()["id"]
+
+        # Create a server using that keypair
+        server_response = client.post(
+            "/api/servers",
+            json={
+                "label": "Test Server",
+                "host": "192.168.1.1",
+                "port": 22,
+                "username": "root",
+                "auth_type": "key",
+                "key_id": keypair_id,
+            },
+        )
+        assert server_response.status_code == 201
+        server_id = server_response.json()["id"]
+        assert server_response.json()["key_id"] == keypair_id
+
+        # Delete the keypair
+        delete_response = client.delete(f"/api/keypairs/{keypair_id}")
+        assert delete_response.status_code == 204
+
+        # Verify the server still exists but key_id is now NULL
+        server_check_response = client.get(f"/api/servers/{server_id}")
+        assert server_check_response.status_code == 200
+        server_data = server_check_response.json()
+        assert server_data["key_id"] is None
