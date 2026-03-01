@@ -1,4 +1,5 @@
 import ServerList from './components/ServerList'
+import ServerForm from './components/ServerList/ServerForm'
 import Terminal from './components/Terminal'
 import AiChat from './components/AiChat'
 
@@ -22,6 +23,7 @@ function App() {
           <AiChat />
         </div>
       </main>
+      <ServerForm />
     </div>
   )
 }
