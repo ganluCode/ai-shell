@@ -380,3 +380,74 @@ class TestServersAPI:
         """Test deleting a non-existent server."""
         response = client.delete("/api/servers/non-existent-id")
         assert response.status_code == 404
+
+    def test_delete_server_cascades_to_command_logs(self, client: Client) -> None:
+        """Test that deleting a server cascades deletion to command_logs."""
+        # Create a server
+        create_response = client.post(
+            "/api/servers",
+            json={
+                "label": "Server with Logs",
+                "host": "logs.example.com",
+                "username": "user",
+                "auth_type": "password",
+                "password": "pass",
+            },
+        )
+        assert create_response.status_code == 201
+        server_id = create_response.json()["id"]
+
+        # Access the test database through the app's dependency override
+        from llm_shell.main import app
+        from llm_shell.api.servers import get_servers_service
+        from llm_shell.db.database import Database
+
+        service = app.dependency_overrides[get_servers_service]()
+        db: Database = service._db
+
+        # Insert command logs directly (no API endpoint yet)
+        import asyncio
+        import uuid
+        from datetime import UTC, datetime
+
+        log_id = str(uuid.uuid4())
+        now = datetime.now(UTC).isoformat()
+
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(
+                db.execute(
+                    """
+                    INSERT INTO command_logs (
+                        id, server_id, session_id, command, source, executed_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (log_id, server_id, "session-1", "ls -la", "manual", now),
+                )
+            )
+            loop.run_until_complete(db.commit())
+
+            # Verify log exists
+            row = loop.run_until_complete(
+                db.fetchone(
+                    "SELECT COUNT(*) as count FROM command_logs WHERE server_id = ?",
+                    (server_id,),
+                )
+            )
+            assert row["count"] == 1
+
+            # Delete the server
+            delete_response = client.delete(f"/api/servers/{server_id}")
+            assert delete_response.status_code == 204
+
+            # Verify command logs were cascade deleted
+            row_after = loop.run_until_complete(
+                db.fetchone(
+                    "SELECT COUNT(*) as count FROM command_logs WHERE server_id = ?",
+                    (server_id,),
+                )
+            )
+            assert row_after["count"] == 0
+        finally:
+            loop.close()
