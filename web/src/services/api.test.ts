@@ -15,8 +15,10 @@ import {
   createKeyPair,
   updateKeyPair,
   deleteKeyPair,
+  getSettings,
+  updateSettings,
 } from './api'
-import type { ServerGroup, Server, KeyPair } from '../types'
+import type { ServerGroup, Server, KeyPair, Settings } from '../types'
 
 describe('api', () => {
   describe('BASE_URL', () => {
@@ -409,6 +411,169 @@ describe('api', () => {
         expect(fetch).toHaveBeenCalledWith('/api/keypairs/key-1', expect.objectContaining({
           method: 'DELETE',
         }))
+      })
+    })
+  })
+
+  // ============================================================================
+  // Settings API Tests
+  // ============================================================================
+
+  describe('Settings API', () => {
+    const mockSettings: Settings = {
+      model: 'claude-sonnet-4-20250514',
+      terminal_font: 'Monaco',
+      terminal_size: '14',
+      theme: 'dark',
+      output_buffer: '1000',
+      context_lines: '50',
+      max_chat_rounds: '10',
+    }
+
+    beforeEach(() => {
+      vi.stubGlobal('fetch', vi.fn())
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    describe('getSettings', () => {
+      it('makes GET request to /api/settings and returns settings object', async () => {
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockSettings,
+        } as Response)
+
+        const result = await getSettings()
+
+        expect(result).toEqual(mockSettings)
+        expect(fetch).toHaveBeenCalledWith('/api/settings', expect.objectContaining({
+          headers: { 'Content-Type': 'application/json' },
+        }))
+      })
+
+      it('returns settings object with all required fields', async () => {
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockSettings,
+        } as Response)
+
+        const result = await getSettings()
+
+        expect(result).toHaveProperty('model')
+        expect(result).toHaveProperty('terminal_font')
+        expect(result).toHaveProperty('terminal_size')
+        expect(result).toHaveProperty('theme')
+        expect(result).toHaveProperty('output_buffer')
+        expect(result).toHaveProperty('context_lines')
+        expect(result).toHaveProperty('max_chat_rounds')
+      })
+
+      it('throws ApiError on network failure', async () => {
+        vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+
+        await expect(getSettings()).rejects.toThrow('Network error')
+      })
+
+      it('throws ApiError on 500 response', async () => {
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({
+            error: { code: 'INTERNAL_ERROR', message: 'Server error' },
+          }),
+        } as Response)
+
+        try {
+          await getSettings()
+          expect.fail('Expected ApiError to be thrown')
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError)
+          expect((error as ApiError).code).toBe('INTERNAL_ERROR')
+          expect((error as ApiError).message).toBe('Server error')
+        }
+      })
+    })
+
+    describe('updateSettings', () => {
+      it('makes PATCH request to /api/settings with partial data', async () => {
+        const input = { theme: 'light' }
+        const updatedSettings = { ...mockSettings, theme: 'light' }
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => updatedSettings,
+        } as Response)
+
+        const result = await updateSettings(input)
+
+        expect(result).toEqual(updatedSettings)
+        expect(fetch).toHaveBeenCalledWith('/api/settings', expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify(input),
+        }))
+      })
+
+      it('sends api_key in request body for API key updates', async () => {
+        const input = { api_key: 'sk-ant-new-key' }
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockSettings,
+        } as Response)
+
+        await updateSettings(input)
+
+        expect(fetch).toHaveBeenCalledWith('/api/settings', expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify(input),
+        }))
+      })
+
+      it('sends multiple fields in single request', async () => {
+        const input = { terminal_font: 'Fira Code', terminal_size: '16' }
+        const updatedSettings = { ...mockSettings, ...input }
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => updatedSettings,
+        } as Response)
+
+        const result = await updateSettings(input)
+
+        expect(result).toEqual(updatedSettings)
+        expect(fetch).toHaveBeenCalledWith('/api/settings', expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify(input),
+        }))
+      })
+
+      it('throws ApiError on network failure', async () => {
+        vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+
+        await expect(updateSettings({ theme: 'light' })).rejects.toThrow('Network error')
+      })
+
+      it('throws ApiError on 400 validation error', async () => {
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          json: async () => ({
+            error: { code: 'VALIDATION_ERROR', message: 'Invalid terminal_size' },
+          }),
+        } as Response)
+
+        try {
+          await updateSettings({ terminal_size: 'invalid' })
+          expect.fail('Expected ApiError to be thrown')
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError)
+          expect((error as ApiError).code).toBe('VALIDATION_ERROR')
+          expect((error as ApiError).message).toBe('Invalid terminal_size')
+        }
       })
     })
   })
