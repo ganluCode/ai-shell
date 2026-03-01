@@ -146,6 +146,69 @@ describe('useServers', () => {
 
       expect(result.current.error).toBe(error)
     })
+
+    it('returns cached data on subsequent renders without refetching', async () => {
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+            staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh
+          },
+        },
+      })
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      )
+
+      // First render - should fetch data
+      const { result, rerender } = renderHook(() => useServers(), { wrapper })
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true))
+      expect(result.current.data).toEqual(mockServers)
+      expect(api.getServers).toHaveBeenCalledTimes(1)
+
+      // Rerender - should return cached data without refetching
+      rerender()
+
+      expect(result.current.data).toEqual(mockServers)
+      // Should still be 1, not called again
+      expect(api.getServers).toHaveBeenCalledTimes(1)
+    })
+
+    it('shares cached data across multiple hook instances with same query key', async () => {
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+            staleTime: 5 * 60 * 1000, // 5 minutes
+          },
+        },
+      })
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      )
+
+      // First hook instance - fetches data
+      const { result: result1 } = renderHook(() => useServers(), { wrapper })
+
+      await waitFor(() => expect(result1.current.isSuccess).toBe(true))
+      expect(result1.current.data).toEqual(mockServers)
+      expect(api.getServers).toHaveBeenCalledTimes(1)
+
+      // Second hook instance with same key - uses cached data
+      const { result: result2 } = renderHook(() => useServers(), { wrapper })
+
+      await waitFor(() => expect(result2.current.isSuccess).toBe(true))
+      expect(result2.current.data).toEqual(mockServers)
+      // Should still be 1 - no additional fetch
+      expect(api.getServers).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('useCreateServer', () => {
@@ -213,6 +276,47 @@ describe('useServers', () => {
         const queryState = queryClient.getQueryState(serversKey())
         expect(queryState?.isInvalidated).toBe(true)
       })
+    })
+
+    it('mutation success invalidates queries and triggers server list refresh', async () => {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false, staleTime: 0 } },
+      })
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      )
+
+      // Set up mock to track fetch calls
+      const updatedServers: Server[] = [...mockServers, createdServer]
+      const getServersSpy = vi.spyOn(api, 'getServers')
+        .mockResolvedValueOnce(mockServers)   // Initial fetch
+        .mockResolvedValueOnce(updatedServers) // Refetch after invalidation
+
+      // Render the servers query hook
+      const { result: serversResult } = renderHook(() => useServers(), { wrapper })
+
+      await waitFor(() => expect(serversResult.current.isSuccess).toBe(true))
+      expect(serversResult.current.data).toEqual(mockServers)
+      expect(getServersSpy).toHaveBeenCalledTimes(1)
+
+      // Now create a new server
+      const { result: createResult } = renderHook(() => useCreateServer(), { wrapper })
+
+      createResult.current.mutate(newServerInput)
+
+      await waitFor(() => expect(createResult.current.isSuccess).toBe(true))
+
+      // After mutation, query should be invalidated and refetch should occur
+      await waitFor(() => {
+        // getServers should have been called again due to invalidation
+        expect(getServersSpy).toHaveBeenCalledTimes(2)
+      })
+
+      // The refetched data should include the new server
+      expect(serversResult.current.data).toEqual(updatedServers)
     })
   })
 
