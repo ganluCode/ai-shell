@@ -93,6 +93,32 @@ class TestServersAPI:
         data = response.json()
         assert data["group_id"] == group_id
 
+    def test_create_server_missing_key_for_key_auth(self, client: Client) -> None:
+        """Test creating a key-auth server without key_id fails."""
+        response = client.post(
+            "/api/servers",
+            json={
+                "label": "Key Server",
+                "host": "keyserver.com",
+                "username": "keyuser",
+                "auth_type": "key",
+            },
+        )
+        assert response.status_code == 422
+
+    def test_create_server_missing_password_for_password_auth(self, client: Client) -> None:
+        """Test creating a password-auth server without password fails."""
+        response = client.post(
+            "/api/servers",
+            json={
+                "label": "Password Server",
+                "host": "pwserver.com",
+                "username": "pwuser",
+                "auth_type": "password",
+            },
+        )
+        assert response.status_code == 422
+
     def test_create_server_invalid_group(self, client: Client) -> None:
         """Test creating a server with non-existent group fails."""
         response = client.post(
