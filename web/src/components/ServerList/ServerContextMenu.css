@@ -1,0 +1,80 @@
+/* ServerContextMenu Component Styles */
+
+.server-context-wrapper {
+  display: contents;
+}
+
+/* Modal overlay */
+.server-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Modal dialog */
+.server-modal {
+  min-width: 320px;
+  padding: 20px;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 8px;
+  background-color: var(--bg-secondary, #1e1e1e);
+  color: var(--text-primary, #ffffff);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.server-modal h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.server-modal .delete-warning {
+  margin: 0 0 8px;
+  color: var(--text-secondary, #888);
+  font-size: 14px;
+}
+
+.server-modal .delete-warning:last-of-type {
+  margin-bottom: 16px;
+}
+
+/* Modal actions */
+.server-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.server-btn-cancel,
+.server-btn-danger {
+  padding: 8px 16px;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.2s;
+}
+
+.server-btn-cancel {
+  background-color: var(--bg-tertiary, #2d2d2d);
+  color: var(--text-primary, #ffffff);
+}
+
+.server-btn-cancel:hover {
+  background-color: var(--bg-hover, #3d3d3d);
+}
+
+.server-btn-danger {
+  background-color: #d32f2f;
+  border-color: #d32f2f;
+  color: #ffffff;
+}
+
+.server-btn-danger:hover {
+  background-color: #b71c1c;
+}
