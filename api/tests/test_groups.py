@@ -127,3 +127,40 @@ class TestServerGroupsAPI:
         """Test deleting a non-existent group."""
         response = client.delete("/api/groups/non-existent-id")
         assert response.status_code == 404
+
+    def test_delete_group_sets_servers_group_id_to_null(self, client: Client) -> None:
+        """Test that deleting a group sets related servers' group_id to NULL."""
+        # Create a group
+        group_response = client.post(
+            "/api/groups",
+            json={"name": "Test Group"},
+        )
+        assert group_response.status_code == 201
+        group_id = group_response.json()["id"]
+
+        # Create a server in that group
+        server_response = client.post(
+            "/api/servers",
+            json={
+                "label": "Test Server",
+                "host": "192.168.1.1",
+                "port": 22,
+                "username": "root",
+                "auth_type": "password",
+                "password": "test-password",
+                "group_id": group_id,
+            },
+        )
+        assert server_response.status_code == 201
+        server_id = server_response.json()["id"]
+        assert server_response.json()["group_id"] == group_id
+
+        # Delete the group
+        delete_response = client.delete(f"/api/groups/{group_id}")
+        assert delete_response.status_code == 204
+
+        # Verify the server still exists but group_id is now NULL
+        server_check_response = client.get(f"/api/servers/{server_id}")
+        assert server_check_response.status_code == 200
+        server_data = server_check_response.json()
+        assert server_data["group_id"] is None
