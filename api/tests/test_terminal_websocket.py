@@ -212,6 +212,11 @@ class TestTerminalWebSocketOutput:
                     status_msg = websocket.receive_json()
                     assert status_msg["type"] == "status"
                     assert status_msg["status"] == "connected"
+
+                    # Second message should be PTY output
+                    output_msg = websocket.receive_json()
+                    assert output_msg["type"] == "output"
+                    assert output_msg["data"] == "test output"
         finally:
             app.dependency_overrides.clear()
 
