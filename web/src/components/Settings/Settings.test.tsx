@@ -114,6 +114,15 @@ describe('Settings Component', () => {
 
       expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument()
     })
+
+    it('renders all configuration sections (API Key, Terminal Appearance, AI Parameters)', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      // Verify all three configuration sections are present
+      expect(screen.getByRole('heading', { name: /api key/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /终端外观/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /ai 参数/i })).toBeInTheDocument()
+    })
   })
 
   describe('Close functionality', () => {
