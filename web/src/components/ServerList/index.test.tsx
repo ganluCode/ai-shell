@@ -360,4 +360,24 @@ describe('ServerList', () => {
       expect(mockOpenSettings).toHaveBeenCalled()
     })
   })
+
+  describe('Double-click to connect', () => {
+    it('double-click on server calls onServerConnect callback', async () => {
+      const user = userEvent.setup()
+      const mockOnServerConnect = vi.fn()
+      render(<ServerList onServerConnect={mockOnServerConnect} />, { wrapper: createWrapper() })
+
+      await waitFor(() => {
+        expect(screen.getByText('Prod Web Server')).toBeInTheDocument()
+      })
+
+      // Double-click on a server item
+      const serverItem = screen.getByRole('button', { name: /select server prod web server/i })
+      await user.dblClick(serverItem)
+
+      expect(mockOnServerConnect).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'server-1' })
+      )
+    })
+  })
 })

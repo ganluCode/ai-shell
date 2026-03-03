@@ -14,6 +14,104 @@ describe('sessionStore', () => {
     })
   })
 
+  describe('createSession', () => {
+    it('should create a new session with serverId and set as active', () => {
+      const { createSession } = useSessionStore.getState()
+
+      let sessionId: string | undefined
+      act(() => {
+        sessionId = createSession('server-1')
+      })
+
+      const { sessions, activeSessionId } = useSessionStore.getState()
+
+      expect(sessionId).toBeDefined()
+      expect(activeSessionId).toBe(sessionId)
+      expect(sessions[sessionId!]).toEqual({
+        id: sessionId,
+        server_id: 'server-1',
+        status: 'connecting',
+      })
+    })
+
+    it('should create multiple sessions with unique IDs', () => {
+      const { createSession } = useSessionStore.getState()
+
+      let sessionId1: string | undefined
+      let sessionId2: string | undefined
+
+      act(() => {
+        sessionId1 = createSession('server-1')
+        sessionId2 = createSession('server-2')
+      })
+
+      expect(sessionId1).not.toBe(sessionId2)
+      expect(useSessionStore.getState().activeSessionId).toBe(sessionId2)
+    })
+  })
+
+  describe('updateStatus', () => {
+    it('should update session status', () => {
+      const { createSession, updateStatus } = useSessionStore.getState()
+
+      let sessionId: string | undefined
+      act(() => {
+        sessionId = createSession('server-1')
+      })
+
+      act(() => {
+        updateStatus(sessionId!, 'connected')
+      })
+
+      const { sessions } = useSessionStore.getState()
+      expect(sessions[sessionId!].status).toBe('connected')
+    })
+
+    it('should update to disconnected status', () => {
+      const { createSession, updateStatus } = useSessionStore.getState()
+
+      let sessionId: string | undefined
+      act(() => {
+        sessionId = createSession('server-1')
+        updateStatus(sessionId!, 'connected')
+      })
+
+      act(() => {
+        updateStatus(sessionId!, 'disconnected')
+      })
+
+      const { sessions } = useSessionStore.getState()
+      expect(sessions[sessionId!].status).toBe('disconnected')
+    })
+
+    it('should update to connection_lost status', () => {
+      const { createSession, updateStatus } = useSessionStore.getState()
+
+      let sessionId: string | undefined
+      act(() => {
+        sessionId = createSession('server-1')
+        updateStatus(sessionId!, 'connected')
+      })
+
+      act(() => {
+        updateStatus(sessionId!, 'connection_lost')
+      })
+
+      const { sessions } = useSessionStore.getState()
+      expect(sessions[sessionId!].status).toBe('connection_lost')
+    })
+
+    it('should not throw when updating non-existent session', () => {
+      const { updateStatus } = useSessionStore.getState()
+
+      expect(() => {
+        act(() => {
+          updateStatus('non-existent', 'connected')
+        })
+      }).not.toThrow()
+    })
+  })
+
   describe('initial state', () => {
     it('should have empty sessions object by default', () => {
       const { sessions } = useSessionStore.getState()
