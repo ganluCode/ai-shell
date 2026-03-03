@@ -8,6 +8,7 @@ from llm_shell.db.database import Database
 from llm_shell.exceptions import NotFoundError, ValidationError
 from llm_shell.models.common import AuthType
 from llm_shell.models.servers import ServerCreate, ServerOut, ServerUpdate
+from llm_shell.services import security
 
 
 class ServersService:
@@ -184,21 +185,12 @@ class ServersService:
 
     def _store_password(self, server_id: str, password: str) -> None:
         """Store password in keyring."""
-        import keyring
-
-        keyring.set_password("llm-shell", f"server:{server_id}", password)
+        security.store_secret(f"password:{server_id}", password)
 
     def _delete_password(self, server_id: str) -> None:
         """Delete password from keyring."""
-        import keyring
-
-        try:
-            keyring.delete_password("llm-shell", f"server:{server_id}")
-        except keyring.errors.PasswordNotFoundError:
-            pass  # Password doesn't exist, that's fine
+        security.delete_secret(f"password:{server_id}")
 
     async def get_password(self, server_id: str) -> str | None:
         """Get password from keyring."""
-        import keyring
-
-        return keyring.get_password("llm-shell", f"server:{server_id}")
+        return security.get_secret(f"password:{server_id}")

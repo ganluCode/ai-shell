@@ -1,5 +1,7 @@
 """Tests for servers API."""
 
+from unittest.mock import MagicMock, patch
+
 from httpx import Client
 
 
@@ -451,3 +453,96 @@ class TestServersAPI:
             assert row_after["count"] == 0
         finally:
             loop.close()
+
+
+class TestKeyringIntegration:
+    """Tests for keyring integration with servers."""
+
+    @patch("llm_shell.services.servers.security.store_secret")
+    def test_create_server_with_password_stores_in_keyring(
+        self, mock_store_secret: MagicMock, client: Client
+    ) -> None:
+        """Test that creating server with password stores it in keyring with key 'password:{server_id}'."""
+        mock_store_secret.return_value = True
+
+        response = client.post(
+            "/api/servers",
+            json={
+                "label": "Test Server",
+                "host": "example.com",
+                "port": 22,
+                "username": "testuser",
+                "auth_type": "password",
+                "password": "my-secret-password",
+                "sort_order": 0,
+            },
+        )
+        assert response.status_code == 201
+        server_id = response.json()["id"]
+
+        # Verify store_secret was called with correct key pattern
+        mock_store_secret.assert_called_once_with(
+            f"password:{server_id}", "my-secret-password"
+        )
+
+    @patch("llm_shell.services.servers.security.store_secret")
+    def test_create_server_with_key_auth_does_not_store_password(
+        self, mock_store_secret: MagicMock, client: Client
+    ) -> None:
+        """Test that creating server with key auth does not store password in keyring."""
+        # First create a keypair
+        keypair_response = client.post(
+            "/api/keypairs",
+            json={
+                "label": "Test Key",
+                "private_key_path": "/home/user/.ssh/id_rsa",
+            },
+        )
+        keypair_id = keypair_response.json()["id"]
+
+        # Create server with key auth
+        response = client.post(
+            "/api/servers",
+            json={
+                "label": "Key Server",
+                "host": "keyserver.com",
+                "username": "keyuser",
+                "auth_type": "key",
+                "key_id": keypair_id,
+            },
+        )
+        assert response.status_code == 201
+
+        # Verify store_secret was not called
+        mock_store_secret.assert_not_called()
+
+    @patch("llm_shell.services.servers.security.delete_secret")
+    def test_delete_server_removes_password_from_keyring(
+        self, mock_delete_secret: MagicMock, client: Client
+    ) -> None:
+        """Test that deleting server removes password from keyring."""
+        mock_delete_secret.return_value = True
+
+        # Create a server with password
+        response = client.post(
+            "/api/servers",
+            json={
+                "label": "To Delete",
+                "host": "delete.com",
+                "username": "user",
+                "auth_type": "password",
+                "password": "password-to-delete",
+            },
+        )
+        assert response.status_code == 201
+        server_id = response.json()["id"]
+
+        # Reset the mock to ignore the create call
+        mock_delete_secret.reset_mock()
+
+        # Delete the server
+        delete_response = client.delete(f"/api/servers/{server_id}")
+        assert delete_response.status_code == 204
+
+        # Verify delete_secret was called with correct key pattern
+        mock_delete_secret.assert_called_once_with(f"password:{server_id}")
