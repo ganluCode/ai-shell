@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -244,6 +244,123 @@ describe('Settings Component', () => {
       await waitFor(() => {
         expect(mockShowToast).toHaveBeenCalledWith('API Key 保存成功')
       })
+    })
+  })
+
+  describe('Terminal Appearance Configuration', () => {
+    it('shows font dropdown with Monaco, Menlo, Consolas, Fira Code options', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      // Check for font dropdown/combobox
+      const fontSelect = screen.getByRole('combobox', { name: /字体|font/i })
+      expect(fontSelect).toBeInTheDocument()
+
+      // Check for font options
+      expect(screen.getByRole('option', { name: /monaco/i })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: /menlo/i })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: /consolas/i })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: /fira code/i })).toBeInTheDocument()
+    })
+
+    it('shows font size slider with range 12-20', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      // Check for font size slider
+      const fontSizeSlider = screen.getByRole('slider', { name: /字体大小|font size/i })
+      expect(fontSizeSlider).toBeInTheDocument()
+      expect(fontSizeSlider).toHaveAttribute('min', '12')
+      expect(fontSizeSlider).toHaveAttribute('max', '20')
+    })
+
+    it('font size slider has default value of 14', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      const fontSizeSlider = screen.getByRole('slider', { name: /字体大小|font size/i })
+      expect(fontSizeSlider).toHaveValue('14')
+    })
+
+    it('shows theme selector with dark and light options', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      // Check for theme selector
+      const themeSelect = screen.getByRole('combobox', { name: /主题|theme/i })
+      expect(themeSelect).toBeInTheDocument()
+
+      // Check for dark and light options
+      expect(screen.getByRole('option', { name: /dark|深色/i })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: /light|浅色/i })).toBeInTheDocument()
+    })
+
+    it('light theme option shows coming soon indicator', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      // Light theme option should indicate coming soon
+      const lightOption = screen.getByRole('option', { name: /light|浅色/i })
+      expect(lightOption.textContent).toMatch(/coming soon|即将推出/i)
+    })
+
+    it('calls updateSettings when font is changed', async () => {
+      const user = userEvent.setup()
+
+      render(<Settings />, { wrapper: createWrapper() })
+
+      const fontSelect = screen.getByRole('combobox', { name: /字体|font/i })
+      await user.selectOptions(fontSelect, 'Fira Code')
+
+      await waitFor(() => {
+        expect(mockUpdateSettings).toHaveBeenCalled()
+        expect(mockUpdateSettings.mock.calls[0][0]).toEqual({ terminal_font: 'Fira Code' })
+      })
+    })
+
+    it('calls updateSettings when font size is changed', async () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      const fontSizeSlider = screen.getByRole('slider', { name: /字体大小|font size/i })
+
+      // Simulate changing the slider value using fireEvent
+      fireEvent.change(fontSizeSlider, { target: { value: '16' } })
+
+      await waitFor(() => {
+        // The slider should have triggered a change event
+        expect(mockUpdateSettings).toHaveBeenCalled()
+        expect(mockUpdateSettings.mock.calls[0][0]).toHaveProperty('terminal_size')
+      })
+    })
+
+    it('calls updateSettings when theme is changed', async () => {
+      const user = userEvent.setup()
+
+      render(<Settings />, { wrapper: createWrapper() })
+
+      const themeSelect = screen.getByRole('combobox', { name: /主题|theme/i })
+      await user.selectOptions(themeSelect, 'dark')
+
+      await waitFor(() => {
+        expect(mockUpdateSettings).toHaveBeenCalled()
+        expect(mockUpdateSettings.mock.calls[0][0]).toEqual({ theme: 'dark' })
+      })
+    })
+
+    it('displays current settings values from API', () => {
+      // Set specific settings values
+      mockSettingsData = {
+        ...mockSettingsData!,
+        terminal_font: 'Fira Code',
+        terminal_size: '18',
+        theme: 'dark',
+      }
+
+      render(<Settings />, { wrapper: createWrapper() })
+
+      const fontSelect = screen.getByRole('combobox', { name: /字体|font/i })
+      expect(fontSelect).toHaveValue('Fira Code')
+
+      const fontSizeSlider = screen.getByRole('slider', { name: /字体大小|font size/i })
+      expect(fontSizeSlider).toHaveValue('18')
+
+      const themeSelect = screen.getByRole('combobox', { name: /主题|theme/i })
+      expect(themeSelect).toHaveValue('dark')
     })
   })
 })

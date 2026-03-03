@@ -1,8 +1,34 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useUIStore } from '../../stores/uiStore'
 import { useSettings, useUpdateSettings } from '../../hooks/useSettings'
 import { useToastStore } from '../../stores/toastStore'
 import './Settings.css'
+
+/** Available terminal fonts */
+const TERMINAL_FONTS = [
+  { value: 'Monaco', label: 'Monaco' },
+  { value: 'Menlo', label: 'Menlo' },
+  { value: 'Consolas', label: 'Consolas' },
+  { value: 'Fira Code', label: 'Fira Code' },
+] as const
+
+/** Theme option type */
+type ThemeOption = {
+  value: string
+  label: string
+  disabled?: boolean
+}
+
+/** Available themes */
+const THEMES: ThemeOption[] = [
+  { value: 'dark', label: '深色 (Dark)' },
+  { value: 'light', label: '浅色 (Light) - 即将推出', disabled: true },
+]
+
+/** Font size range constants */
+const FONT_SIZE_MIN = 12
+const FONT_SIZE_MAX = 20
+const FONT_SIZE_DEFAULT = 14
 
 /**
  * Mask an API key for display (show sk-***xxxx format)
@@ -55,6 +81,33 @@ function Settings() {
       }
     )
   }
+
+  // Handle terminal font change
+  const handleFontChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const font = e.target.value
+      updateSettings.mutate({ terminal_font: font })
+    },
+    [updateSettings]
+  )
+
+  // Handle terminal font size change
+  const handleFontSizeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const size = e.target.value
+      updateSettings.mutate({ terminal_size: size })
+    },
+    [updateSettings]
+  )
+
+  // Handle theme change
+  const handleThemeChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const theme = e.target.value
+      updateSettings.mutate({ theme })
+    },
+    [updateSettings]
+  )
 
   if (!settingsOpen) {
     return null
@@ -132,6 +185,76 @@ function Settings() {
               >
                 {updateSettings.isPending ? '保存中...' : '保存'}
               </button>
+            </div>
+          </section>
+
+          {/* Terminal Appearance Configuration Section */}
+          <section className="settings-section">
+            <h3 className="settings-section-title">终端外观</h3>
+
+            {/* Font selector */}
+            <div className="settings-field">
+              <label className="settings-label" htmlFor="terminal-font">
+                字体 (Font)
+              </label>
+              <select
+                id="terminal-font"
+                className="settings-select"
+                value={settings?.terminal_font || 'Monaco'}
+                onChange={handleFontChange}
+                aria-label="字体"
+              >
+                {TERMINAL_FONTS.map((font) => (
+                  <option key={font.value} value={font.value}>
+                    {font.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Font size slider */}
+            <div className="settings-field">
+              <label className="settings-label" htmlFor="terminal-font-size">
+                字体大小 (Font Size): {settings?.terminal_size || FONT_SIZE_DEFAULT}
+              </label>
+              <input
+                id="terminal-font-size"
+                type="range"
+                className="settings-slider"
+                min={FONT_SIZE_MIN}
+                max={FONT_SIZE_MAX}
+                value={settings?.terminal_size || FONT_SIZE_DEFAULT}
+                onChange={handleFontSizeChange}
+                aria-label="字体大小"
+              />
+              <div className="settings-slider-labels">
+                <span>{FONT_SIZE_MIN}</span>
+                <span>{FONT_SIZE_MAX}</span>
+              </div>
+            </div>
+
+            {/* Theme selector */}
+            <div className="settings-field">
+              <label className="settings-label" htmlFor="terminal-theme">
+                主题 (Theme)
+              </label>
+              <select
+                id="terminal-theme"
+                className="settings-select"
+                value={settings?.theme || 'dark'}
+                onChange={handleThemeChange}
+                aria-label="主题"
+              >
+                {THEMES.map((theme) => (
+                  <option
+                    key={theme.value}
+                    value={theme.value}
+                    disabled={theme.disabled}
+                  >
+                    {theme.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </section>
         </div>
