@@ -1,9 +1,12 @@
 """SSH Session management."""
 
+import logging
 from enum import StrEnum
 from typing import Any
 
 from llm_shell.services.output_buffer import OutputBuffer
+
+logger = logging.getLogger(__name__)
 
 
 class SSHSessionStatus(StrEnum):
@@ -109,3 +112,48 @@ class SSHSession:
                 await self.connection.wait_closed()
 
         self.status = SSHSessionStatus.DISCONNECTED
+
+
+async def probe_server(conn: Any) -> dict[str, str]:
+    """Probe a remote server to collect system information.
+
+    Executes non-TTY commands to gather information about the remote server
+    including kernel info, shell, OS release, and current username.
+
+    Args:
+        conn: An asyncssh SSHClientConnection.
+
+    Returns:
+        Dictionary containing:
+            - uname: Output of 'uname -a' command
+            - shell: Output of 'echo $SHELL' command
+            - os_release: Output of 'cat /etc/os-release | head -5' command
+            - username: Output of 'whoami' command
+    """
+    server_info: dict[str, str] = {
+        "uname": "",
+        "shell": "",
+        "os_release": "",
+        "username": "",
+    }
+
+    # Commands to probe
+    commands = {
+        "uname": "uname -a",
+        "shell": "echo $SHELL",
+        "os_release": "cat /etc/os-release | head -5",
+        "username": "whoami",
+    }
+
+    for key, cmd in commands.items():
+        try:
+            result = await conn.exec(cmd)
+            stdout = await result.stdout.read()
+            # Decode and strip trailing whitespace
+            output = stdout.decode("utf-8", errors="replace").strip()
+            server_info[key] = output
+        except Exception as e:
+            logger.warning(f"Failed to probe {key} with command '{cmd}': {e}")
+            server_info[key] = ""
+
+    return server_info
