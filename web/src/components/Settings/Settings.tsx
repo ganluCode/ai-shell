@@ -30,6 +30,23 @@ const FONT_SIZE_MIN = 12
 const FONT_SIZE_MAX = 20
 const FONT_SIZE_DEFAULT = 14
 
+/** Context lines range constants */
+const CONTEXT_LINES_MIN = 20
+const CONTEXT_LINES_MAX = 200
+const CONTEXT_LINES_DEFAULT = 50
+
+/** Max chat rounds range constants */
+const MAX_CHAT_ROUNDS_MIN = 5
+const MAX_CHAT_ROUNDS_MAX = 30
+const MAX_CHAT_ROUNDS_DEFAULT = 10
+
+/** Available AI models */
+const AI_MODELS: Array<{ value: string; label: string; disabled?: boolean }> = [
+  { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+  { value: 'claude-opus-4-20250514', label: 'Claude Opus 4 - 即将推出', disabled: true },
+  { value: 'claude-haiku-3-5-20241022', label: 'Claude Haiku 3.5 - 即将推出', disabled: true },
+]
+
 /**
  * Mask an API key for display (show sk-***xxxx format)
  * @param apiKey - The API key to mask
@@ -105,6 +122,33 @@ function Settings() {
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       const theme = e.target.value
       updateSettings.mutate({ theme })
+    },
+    [updateSettings]
+  )
+
+  // Handle AI model change
+  const handleModelChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const model = e.target.value
+      updateSettings.mutate({ model })
+    },
+    [updateSettings]
+  )
+
+  // Handle context lines change
+  const handleContextLinesChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const contextLines = e.target.value
+      updateSettings.mutate({ context_lines: contextLines })
+    },
+    [updateSettings]
+  )
+
+  // Handle max chat rounds change
+  const handleMaxChatRoundsChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const maxChatRounds = e.target.value
+      updateSettings.mutate({ max_chat_rounds: maxChatRounds })
     },
     [updateSettings]
   )
@@ -255,6 +299,78 @@ function Settings() {
                   </option>
                 ))}
               </select>
+            </div>
+          </section>
+
+          {/* AI Parameters Configuration Section */}
+          <section className="settings-section">
+            <h3 className="settings-section-title">AI 参数</h3>
+
+            {/* Model selector */}
+            <div className="settings-field">
+              <label className="settings-label" htmlFor="ai-model">
+                模型 (Model)
+              </label>
+              <select
+                id="ai-model"
+                className="settings-select"
+                value={settings?.model || 'claude-sonnet-4-20250514'}
+                onChange={handleModelChange}
+                aria-label="模型"
+              >
+                {AI_MODELS.map((model) => (
+                  <option
+                    key={model.value}
+                    value={model.value}
+                    disabled={model.disabled}
+                  >
+                    {model.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Context lines slider */}
+            <div className="settings-field">
+              <label className="settings-label" htmlFor="context-lines">
+                上下文行数 (Context Lines): {settings?.context_lines || CONTEXT_LINES_DEFAULT}
+              </label>
+              <input
+                id="context-lines"
+                type="range"
+                className="settings-slider"
+                min={CONTEXT_LINES_MIN}
+                max={CONTEXT_LINES_MAX}
+                value={settings?.context_lines || CONTEXT_LINES_DEFAULT}
+                onChange={handleContextLinesChange}
+                aria-label="上下文行数"
+              />
+              <div className="settings-slider-labels">
+                <span>{CONTEXT_LINES_MIN}</span>
+                <span>{CONTEXT_LINES_MAX}</span>
+              </div>
+              <p className="settings-helper-text">每次送入 AI 的终端输出行数</p>
+            </div>
+
+            {/* Max chat rounds slider */}
+            <div className="settings-field">
+              <label className="settings-label" htmlFor="max-chat-rounds">
+                最大对话轮数 (Max Chat Rounds): {settings?.max_chat_rounds || MAX_CHAT_ROUNDS_DEFAULT}
+              </label>
+              <input
+                id="max-chat-rounds"
+                type="range"
+                className="settings-slider"
+                min={MAX_CHAT_ROUNDS_MIN}
+                max={MAX_CHAT_ROUNDS_MAX}
+                value={settings?.max_chat_rounds || MAX_CHAT_ROUNDS_DEFAULT}
+                onChange={handleMaxChatRoundsChange}
+                aria-label="最大对话轮数"
+              />
+              <div className="settings-slider-labels">
+                <span>{MAX_CHAT_ROUNDS_MIN}</span>
+                <span>{MAX_CHAT_ROUNDS_MAX}</span>
+              </div>
             </div>
           </section>
         </div>

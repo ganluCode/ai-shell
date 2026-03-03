@@ -363,4 +363,129 @@ describe('Settings Component', () => {
       expect(themeSelect).toHaveValue('dark')
     })
   })
+
+  describe('AI Parameters Configuration', () => {
+    it('shows model dropdown with claude-sonnet-4-20250514 option', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      // Check for model dropdown/combobox
+      const modelSelect = screen.getByRole('combobox', { name: /模型|model/i })
+      expect(modelSelect).toBeInTheDocument()
+
+      // Check for Claude Sonnet 4 option (which has value claude-sonnet-4-20250514)
+      expect(screen.getByRole('option', { name: /claude sonnet 4/i })).toBeInTheDocument()
+    })
+
+    it('model dropdown shows other models as coming soon', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      // Check for coming soon indicator on other model options (specifically in AI models)
+      const comingSoonOption = screen.getByRole('option', { name: /opus.*即将推出|opus.*coming soon/i })
+      expect(comingSoonOption).toBeInTheDocument()
+    })
+
+    it('shows context_lines slider with range 20-200', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      // Check for context_lines slider
+      const contextLinesSlider = screen.getByRole('slider', { name: /上下文行数|context.*lines/i })
+      expect(contextLinesSlider).toBeInTheDocument()
+      expect(contextLinesSlider).toHaveAttribute('min', '20')
+      expect(contextLinesSlider).toHaveAttribute('max', '200')
+    })
+
+    it('context_lines slider has default value of 50', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      const contextLinesSlider = screen.getByRole('slider', { name: /上下文行数|context.*lines/i })
+      expect(contextLinesSlider).toHaveValue('50')
+    })
+
+    it('context_lines displays helper text explaining its purpose', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      // Check for helper text
+      expect(screen.getByText(/每次送入 AI 的终端输出行数/i)).toBeInTheDocument()
+    })
+
+    it('shows max_chat_rounds slider with range 5-30', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      // Check for max_chat_rounds slider
+      const maxChatRoundsSlider = screen.getByRole('slider', { name: /最大对话轮数|max.*chat.*rounds/i })
+      expect(maxChatRoundsSlider).toBeInTheDocument()
+      expect(maxChatRoundsSlider).toHaveAttribute('min', '5')
+      expect(maxChatRoundsSlider).toHaveAttribute('max', '30')
+    })
+
+    it('max_chat_rounds slider has default value of 10', () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      const maxChatRoundsSlider = screen.getByRole('slider', { name: /最大对话轮数|max.*chat.*rounds/i })
+      expect(maxChatRoundsSlider).toHaveValue('10')
+    })
+
+    it('calls updateSettings when model is changed', async () => {
+      const user = userEvent.setup()
+
+      render(<Settings />, { wrapper: createWrapper() })
+
+      const modelSelect = screen.getByRole('combobox', { name: /模型|model/i })
+      await user.selectOptions(modelSelect, 'claude-sonnet-4-20250514')
+
+      await waitFor(() => {
+        expect(mockUpdateSettings).toHaveBeenCalled()
+        expect(mockUpdateSettings.mock.calls[0][0]).toHaveProperty('model')
+      })
+    })
+
+    it('calls updateSettings when context_lines is changed', async () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      const contextLinesSlider = screen.getByRole('slider', { name: /上下文行数|context.*lines/i })
+
+      // Simulate changing the slider value using fireEvent
+      fireEvent.change(contextLinesSlider, { target: { value: '100' } })
+
+      await waitFor(() => {
+        expect(mockUpdateSettings).toHaveBeenCalled()
+        expect(mockUpdateSettings.mock.calls[0][0]).toHaveProperty('context_lines')
+      })
+    })
+
+    it('calls updateSettings when max_chat_rounds is changed', async () => {
+      render(<Settings />, { wrapper: createWrapper() })
+
+      const maxChatRoundsSlider = screen.getByRole('slider', { name: /最大对话轮数|max.*chat.*rounds/i })
+
+      // Simulate changing the slider value using fireEvent
+      fireEvent.change(maxChatRoundsSlider, { target: { value: '20' } })
+
+      await waitFor(() => {
+        expect(mockUpdateSettings).toHaveBeenCalled()
+        expect(mockUpdateSettings.mock.calls[0][0]).toHaveProperty('max_chat_rounds')
+      })
+    })
+
+    it('displays current AI parameter values from API', () => {
+      // Set specific AI parameter values
+      mockSettingsData = {
+        ...mockSettingsData!,
+        model: 'claude-sonnet-4-20250514',
+        context_lines: '100',
+        max_chat_rounds: '15',
+      }
+
+      render(<Settings />, { wrapper: createWrapper() })
+
+      const modelSelect = screen.getByRole('combobox', { name: /模型|model/i })
+      expect(modelSelect).toHaveValue('claude-sonnet-4-20250514')
+
+      const contextLinesSlider = screen.getByRole('slider', { name: /上下文行数|context.*lines/i })
+      expect(contextLinesSlider).toHaveValue('100')
+
+      const maxChatRoundsSlider = screen.getByRole('slider', { name: /最大对话轮数|max.*chat.*rounds/i })
+      expect(maxChatRoundsSlider).toHaveValue('15')
+    })
+  })
 })

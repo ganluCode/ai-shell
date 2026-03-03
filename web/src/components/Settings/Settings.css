@@ -276,3 +276,11 @@
   font-size: 11px;
   color: var(--text-muted, #666666);
 }
+
+/* Helper Text */
+.settings-helper-text {
+  margin: 4px 0 0 0;
+  font-size: 11px;
+  color: var(--text-muted, #888888);
+  font-style: italic;
+}
