@@ -137,6 +137,18 @@ function ServerList({ onServerConnect }: ServerListProps) {
           </button>
         </div>
         <div className="server-list-empty">No servers configured</div>
+
+        {/* Sidebar footer with Settings button */}
+        <footer className="server-list-footer" role="contentinfo" aria-label="Sidebar footer">
+          <button
+            type="button"
+            className="server-list-footer-btn"
+            onClick={openSettings}
+            aria-label="⚙ 设置"
+          >
+            ⚙ 设置
+          </button>
+        </footer>
       </div>
     )
   }
@@ -244,6 +256,18 @@ function ServerList({ onServerConnect }: ServerListProps) {
         {/* Add group button at the bottom */}
         <GroupManager group={null} onContextMenuChange={() => {}} />
       </div>
+
+      {/* Sidebar footer with Settings button */}
+      <footer className="server-list-footer" role="contentinfo" aria-label="Sidebar footer">
+        <button
+          type="button"
+          className="server-list-footer-btn"
+          onClick={openSettings}
+          aria-label="⚙ 设置"
+        >
+          ⚙ 设置
+        </button>
+      </footer>
     </div>
   )
 }

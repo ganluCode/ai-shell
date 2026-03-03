@@ -310,7 +310,7 @@ describe('ServerList', () => {
       expect(mockOpenServerForm).toHaveBeenCalled()
     })
 
-    it('[Settings] button opens settings panel', async () => {
+    it('[Settings] button in header opens settings panel', async () => {
       const user = userEvent.setup()
       render(<ServerList />, { wrapper: createWrapper() })
 
@@ -318,9 +318,44 @@ describe('ServerList', () => {
         expect(screen.getByText('Production')).toBeInTheDocument()
       })
 
-      // Click Settings button
-      const settingsButton = screen.getByRole('button', { name: /settings/i })
-      await user.click(settingsButton)
+      // Click Settings button in header
+      const settingsButtons = screen.getAllByRole('button', { name: /settings/i })
+      const headerSettingsButton = settingsButtons.find(
+        (btn) => btn.closest('.server-list-header') !== null
+      )
+      await user.click(headerSettingsButton!)
+
+      expect(mockOpenSettings).toHaveBeenCalled()
+    })
+  })
+
+  describe('Sidebar footer', () => {
+    it('has a footer section with Settings button', async () => {
+      render(<ServerList />, { wrapper: createWrapper() })
+
+      await waitFor(() => {
+        expect(screen.getByText('Production')).toBeInTheDocument()
+      })
+
+      // Check for footer with Settings button
+      const footer = screen.getByRole('contentinfo', { name: /sidebar footer/i })
+      expect(footer).toBeInTheDocument()
+
+      const footerSettingsButton = screen.getByRole('button', { name: /⚙ 设置/i })
+      expect(footerSettingsButton).toBeInTheDocument()
+    })
+
+    it('footer Settings button calls openSettings()', async () => {
+      const user = userEvent.setup()
+      render(<ServerList />, { wrapper: createWrapper() })
+
+      await waitFor(() => {
+        expect(screen.getByText('Production')).toBeInTheDocument()
+      })
+
+      // Click footer Settings button
+      const footerSettingsButton = screen.getByRole('button', { name: /⚙ 设置/i })
+      await user.click(footerSettingsButton)
 
       expect(mockOpenSettings).toHaveBeenCalled()
     })
