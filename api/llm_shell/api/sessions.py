@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
 from llm_shell.db.database import Database, get_database
 from llm_shell.exceptions import AppError, SSHError
+from llm_shell.services.reconnection import ReconnectionHandler
 from llm_shell.services.session_manager import SessionManager
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ class TerminalWebSocketHandler:
     This class manages:
     - WebSocket connection lifecycle
     - Message routing between client and SSH session
+    - Disconnection detection and reconnection
     - Error handling and cleanup
     """
 
@@ -53,6 +55,7 @@ class TerminalWebSocketHandler:
         websocket: WebSocket,
         session_manager: SessionManager,
         server_id: str,
+        db: Database,
     ) -> None:
         """Initialize the terminal WebSocket handler.
 
@@ -60,12 +63,15 @@ class TerminalWebSocketHandler:
             websocket: The WebSocket connection.
             session_manager: The session manager for SSH sessions.
             server_id: The server ID to connect to.
+            db: Database instance for updating timestamps.
         """
         self.websocket = websocket
         self.session_manager = session_manager
         self.server_id = server_id
+        self.db = db
         self.session: Any = None
         self._output_task: asyncio.Task[None] | None = None
+        self._reconnecting = False
 
     async def run(self) -> None:
         """Run the WebSocket handler.
@@ -130,6 +136,7 @@ class TerminalWebSocketHandler:
 
         Continuously reads from the SSH session's output buffer and
         sends it as output messages to the WebSocket client.
+        Detects disconnection and triggers reconnection logic.
         """
         if self.session is None or self.session.process is None:
             return
@@ -141,11 +148,18 @@ class TerminalWebSocketHandler:
                     await self.websocket.send_json(
                         {"type": "output", "data": data.decode("utf-8", errors="replace")}
                     )
+
+            # If we reach here, the stream ended (EOF) - connection likely lost
+            logger.warning(f"SSH stdout EOF detected for server {self.server_id}")
+            await self._handle_disconnection()
+
         except asyncio.CancelledError:
             # Task was cancelled, this is expected during cleanup
             pass
         except Exception as e:
             logger.warning(f"Error reading PTY output: {e}")
+            # Connection error - trigger reconnection
+            await self._handle_disconnection()
 
     async def _handle_messages(self) -> None:
         """Handle incoming WebSocket messages.
@@ -204,6 +218,48 @@ class TerminalWebSocketHandler:
         if isinstance(cols, int) and isinstance(rows, int):
             self.session.change_terminal_size(cols, rows)
 
+    async def _handle_disconnection(self) -> None:
+        """Handle SSH disconnection and attempt reconnection.
+
+        Uses ReconnectionHandler to manage the reconnection process with
+        exponential backoff. On success, updates the session and restarts
+        output forwarding.
+        """
+        if self._reconnecting:
+            return
+
+        self._reconnecting = True
+
+        try:
+            handler = ReconnectionHandler(
+                session_manager=self.session_manager,
+                server_id=self.server_id,
+                websocket=self.websocket,
+                db=self.db,
+            )
+
+            new_session = await handler.handle_disconnection(
+                old_session=self.session,
+                max_retries=5,
+            )
+
+            if new_session:
+                # Reconnection successful - update session and restart output
+                self.session = new_session
+                self._reconnecting = False
+
+                # Restart output forwarding with new session
+                self._output_task = asyncio.create_task(self._forward_output())
+            else:
+                # All retries failed - connection lost
+                logger.error(f"Connection lost to server {self.server_id}")
+                # The ReconnectionHandler already sent connection_lost status
+
+        except Exception as e:
+            logger.exception(f"Error during reconnection: {e}")
+        finally:
+            self._reconnecting = False
+
     async def _cleanup(self) -> None:
         """Clean up resources on disconnect.
 
@@ -229,6 +285,7 @@ class TerminalWebSocketHandler:
 async def terminal_websocket(
     websocket: WebSocket,
     server_id: str,
+    db: Annotated[Database, Depends(get_database)],
     session_manager: Annotated[SessionManager, Depends(get_session_manager)],
 ) -> None:
     """WebSocket endpoint for interactive terminal sessions.
@@ -242,13 +299,17 @@ async def terminal_websocket(
     - Server -> Client: {"type": "status", "status": "connected"}
     - Server -> Client: {"type": "output", "data": "..."}
     - Server -> Client: {"type": "error", "code": "...", "message": "..."}
+    - Server -> Client: {"type": "status", "status": "disconnected", "retry": N, "max_retry": 5}
+    - Server -> Client: {"type": "status", "status": "reconnected"}
+    - Server -> Client: {"type": "status", "status": "connection_lost"}
 
     Args:
         websocket: The WebSocket connection.
         server_id: ID of the server to connect to.
+        db: Database instance.
         session_manager: Session manager for SSH connections.
     """
     await websocket.accept()
 
-    handler = TerminalWebSocketHandler(websocket, session_manager, server_id)
+    handler = TerminalWebSocketHandler(websocket, session_manager, server_id, db)
     await handler.run()

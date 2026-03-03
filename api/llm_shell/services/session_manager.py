@@ -2,6 +2,7 @@
 
 import logging
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 import asyncssh
@@ -88,6 +89,7 @@ class SessionManager:
             "host": host,
             "port": port,
             "username": username,
+            "keepalive_interval": 15,
         }
 
         # Get authentication credentials
@@ -151,6 +153,14 @@ class SessionManager:
 
         # Register session
         self._sessions[session_id] = session
+
+        # Update server's last_connected_at timestamp
+        now = datetime.now(UTC).isoformat()
+        await self._db.execute(
+            "UPDATE servers SET last_connected_at = ? WHERE id = ?",
+            (now, server_id),
+        )
+        await self._db.commit()
 
         logger.info(f"Opened SSH session {session_id} to {host}:{port}")
 
