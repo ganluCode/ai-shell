@@ -147,3 +147,37 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Sidebar footer */
+.server-list-footer {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-top: 1px solid var(--border-color, #333);
+  background-color: var(--bg-secondary, #1e1e1e);
+}
+
+.server-list-footer-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--text-primary, #ffffff);
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+.server-list-footer-btn:hover {
+  background-color: var(--bg-hover, #3d3d3d);
+}
+
+.server-list-footer-btn:focus-visible {
+  outline: 2px solid var(--accent-color, #0078d4);
+  outline-offset: 2px;
+}
