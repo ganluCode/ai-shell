@@ -57,9 +57,10 @@ async def health_check() -> dict[str, str]:
 
 
 # Include routers
-from llm_shell.api import groups, keypairs, servers, sessions  # noqa: E402
+from llm_shell.api import assistant, groups, keypairs, servers, sessions  # noqa: E402
 from llm_shell.api import settings as settings_api
 
+app.include_router(assistant.router, prefix="/api", tags=["assistant"])
 app.include_router(groups.router, prefix="/api", tags=["groups"])
 app.include_router(keypairs.router, prefix="/api", tags=["keypairs"])
 app.include_router(servers.router, prefix="/api", tags=["servers"])
