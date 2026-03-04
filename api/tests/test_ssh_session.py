@@ -212,7 +212,9 @@ class TestSSHSessionWriteInput:
         """write_input should write data to process.stdin."""
         mock_connection = MagicMock()
         mock_process = MagicMock()
-        mock_stdin = AsyncMock()
+        # stdin.write() is synchronous, only drain() is async
+        mock_stdin = MagicMock()
+        mock_stdin.drain = AsyncMock()
         mock_process.stdin = mock_stdin
         buffer = OutputBuffer()
 
@@ -233,7 +235,9 @@ class TestSSHSessionWriteInput:
         """write_input should accept bytes."""
         mock_connection = MagicMock()
         mock_process = MagicMock()
-        mock_stdin = AsyncMock()
+        # stdin.write() is synchronous, only drain() is async
+        mock_stdin = MagicMock()
+        mock_stdin.drain = AsyncMock()
         mock_process.stdin = mock_stdin
         buffer = OutputBuffer()
 
@@ -254,7 +258,9 @@ class TestSSHSessionWriteInput:
         """write_input should handle special characters like Ctrl-C."""
         mock_connection = MagicMock()
         mock_process = MagicMock()
-        mock_stdin = AsyncMock()
+        # stdin.write() is synchronous, only drain() is async
+        mock_stdin = MagicMock()
+        mock_stdin.drain = AsyncMock()
         mock_process.stdin = mock_stdin
         buffer = OutputBuffer()
 

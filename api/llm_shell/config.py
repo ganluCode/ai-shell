@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Literal
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,7 +33,15 @@ class Settings(BaseSettings):
     ssh_connection_timeout: int = 30
 
     # AI configuration
-    default_model: str = "claude-sonnet-4-20250514"
+    default_model: str = "MiniMax-M2.5"
+    anthropic_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("LLM_SHELL_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY"),
+    )
+    anthropic_base_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("LLM_SHELL_ANTHROPIC_BASE_URL", "ANTHROPIC_BASE_URL"),
+    )
     max_context_lines: int = 1000
     default_context_lines: int = 50
     max_chat_rounds: int = 10

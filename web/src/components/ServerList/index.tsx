@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useGroups } from '../../hooks/useGroups'
 import { useServers, useDeleteServer } from '../../hooks/useServers'
 import { useUIStore } from '../../stores/uiStore'
+import { useSessionStore } from '../../stores/sessionStore'
 import type { Server, ServerGroup } from '../../types'
 import GroupManager from './GroupManager'
 import ServerContextMenu from './ServerContextMenu'
@@ -90,9 +91,15 @@ function ServerList({ onServerConnect }: ServerListProps) {
     })
   }
 
+  const createSession = useSessionStore((state) => state.createSession)
+
   const handleServerClick = (server: Server) => {
     setSelectedServerId(server.id)
     onServerConnect?.(server)
+  }
+
+  const handleServerDoubleClick = (server: Server) => {
+    createSession(server.id)
   }
 
   const handleServerEdit = (server: Server) => {
@@ -227,6 +234,7 @@ function ServerList({ onServerConnect }: ServerListProps) {
                         type="button"
                         className={`server-item ${selectedServerId === server.id ? 'selected' : ''}`}
                         onClick={() => handleServerClick(server)}
+                        onDoubleClick={() => handleServerDoubleClick(server)}
                         aria-pressed={selectedServerId === server.id}
                         aria-label={`Select server ${server.label}`}
                       >

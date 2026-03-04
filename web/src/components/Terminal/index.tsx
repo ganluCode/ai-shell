@@ -1,9 +1,11 @@
+import { TabBar } from './TabBar'
+import { TerminalPanel } from './TerminalPanel'
+
 function Terminal() {
   return (
     <div className="terminal" role="region" aria-label="Terminal">
-      <div className="terminal-placeholder">
-        Terminal
-      </div>
+      <TabBar />
+      <TerminalPanel />
     </div>
   )
 }

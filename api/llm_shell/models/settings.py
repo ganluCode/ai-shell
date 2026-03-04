@@ -8,6 +8,7 @@ class SettingsAllOut(BaseModel):
     """All settings response."""
 
     model: str
+    base_url: str
     terminal_font: str
     terminal_size: str
     theme: str
@@ -21,6 +22,7 @@ class SettingsUpdate(BaseModel):
     """Settings partial update request."""
 
     model: str | None = None
+    base_url: str | None = None
     terminal_font: str | None = None
     terminal_size: str | None = None
     theme: str | None = Field(None, pattern=r"^(light|dark)$")
