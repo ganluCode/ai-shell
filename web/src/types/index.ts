@@ -189,7 +189,7 @@ export interface SSHConfigImportResult {
 // ============================================================================
 
 /** Terminal session connection status */
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'connection_lost';
 
 /** Terminal session for a server connection */
 export interface Session {
