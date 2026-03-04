@@ -158,6 +158,27 @@ export type ChatEvent =
   | { type: 'error'; error: { code: string; message: string } }
   | { type: 'done' };
 
+/** Chat message in a conversation */
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  suggestions?: CommandSuggestion[];
+  isComplete: boolean;
+}
+
+/** Command execution status */
+export type CommandStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped';
+
+/** Command item in the command queue */
+export interface CommandItem {
+  id: string;
+  command: string;
+  explanation: string;
+  riskLevel: RiskLevel;
+  status: CommandStatus;
+  edited: boolean;
+}
+
 // ============================================================================
 // SSH Config Import Interfaces
 // ============================================================================
@@ -196,6 +217,10 @@ export interface Session {
   id: string;
   server_id: string;
   status: ConnectionStatus;
+  /** Chat messages in this session */
+  chatMessages: ChatMessage[];
+  /** Command queue for AI-suggested commands */
+  commandQueue: CommandItem[] | null;
 }
 
 // ============================================================================
