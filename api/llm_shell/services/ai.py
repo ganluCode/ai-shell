@@ -1,5 +1,91 @@
 """AI service for Claude API integration."""
 
+TOOLS = [
+    {
+        "name": "suggest_command",
+        "description": "建议单个 shell 命令供用户执行",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "要执行的 shell 命令",
+                },
+                "explanation": {
+                    "type": "string",
+                    "description": "命令的作用说明",
+                },
+                "risk_level": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high"],
+                    "description": "命令的风险等级：low(只读)、medium(修改)、high(危险)",
+                },
+                "thinking": {
+                    "type": "string",
+                    "description": "AI 的思考过程（可选）",
+                },
+            },
+            "required": ["command", "explanation", "risk_level"],
+        },
+    },
+    {
+        "name": "suggest_commands",
+        "description": "建议多个 shell 命令选项供用户选择",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "commands": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "command": {
+                                "type": "string",
+                                "description": "要执行的 shell 命令",
+                            },
+                            "explanation": {
+                                "type": "string",
+                                "description": "命令的作用说明",
+                            },
+                            "risk_level": {
+                                "type": "string",
+                                "enum": ["low", "medium", "high"],
+                                "description": "命令的风险等级",
+                            },
+                        },
+                        "required": ["command", "explanation", "risk_level"],
+                    },
+                    "description": "命令选项列表",
+                },
+                "thinking": {
+                    "type": "string",
+                    "description": "AI 的思考过程（可选）",
+                },
+            },
+            "required": ["commands"],
+        },
+    },
+    {
+        "name": "search_terminal_output",
+        "description": "搜索终端历史输出内容",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "搜索模式（支持正则表达式）",
+                },
+                "context_lines": {
+                    "type": "integer",
+                    "default": 3,
+                    "description": "匹配结果上下文行数",
+                },
+            },
+            "required": ["pattern"],
+        },
+    },
+]
+
 SYSTEM_PROMPT = """你是一个专业的 Linux/Unix 系统运维助手，帮助用户生成和执行 shell 命令。
 
 ## 你的职责
