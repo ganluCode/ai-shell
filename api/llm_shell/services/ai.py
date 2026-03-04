@@ -32,6 +32,24 @@ logger = logging.getLogger(__name__)
 MAX_RETRIES = 2
 RETRY_DELAYS = [1, 3]  # seconds
 
+# Token budget configuration
+# Target ~4000 tokens for total input (system prompt + context + history)
+# Rough estimation: 1 token ≈ 4 characters for English text
+DEFAULT_MAX_CHAT_ROUNDS = 10
+
+
+def create_history_deque(max_chat_rounds: int = DEFAULT_MAX_CHAT_ROUNDS) -> deque:
+    """Create a conversation history deque with appropriate maxlen.
+
+    Args:
+        max_chat_rounds: Maximum number of conversation rounds to keep.
+            Each round has 2 messages (user + assistant), so maxlen = max_chat_rounds * 2.
+
+    Returns:
+        A deque with maxlen set to max_chat_rounds * 2.
+    """
+    return deque(maxlen=max_chat_rounds * 2)
+
 TOOLS = [
     {
         "name": "suggest_command",
