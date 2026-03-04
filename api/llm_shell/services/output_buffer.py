@@ -107,3 +107,53 @@ class OutputBuffer:
         if self._partial_line:
             lines.append(self._partial_line)
         return lines
+
+
+def search_output_buffer(
+    buffer: list[str], pattern: str, context_lines: int = 3
+) -> list[dict]:
+    """Search terminal output buffer for pattern matches with context.
+
+    Args:
+        buffer: List of terminal output lines to search.
+        pattern: Regex pattern to search for. Invalid patterns are escaped.
+        context_lines: Number of lines to include before and after each match.
+            Defaults to 3.
+
+    Returns:
+        List of match dictionaries, each containing:
+        - matched_line: The line that matched the pattern
+        - line_number: 0-indexed line number of the match
+        - context: List of surrounding lines (up to context_lines before and after)
+
+        Maximum of 10 matches are returned to prevent token explosion.
+    """
+    if not buffer:
+        return []
+
+    # Try to compile as regex, escape if invalid
+    try:
+        regex = re.compile(pattern)
+    except re.error:
+        regex = re.compile(re.escape(pattern))
+
+    results = []
+    max_results = 10
+
+    for i, line in enumerate(buffer):
+        if len(results) >= max_results:
+            break
+
+        if regex.search(line):
+            # Calculate context boundaries
+            start = max(0, i - context_lines)
+            end = min(len(buffer), i + context_lines + 1)
+            context = buffer[start:end]
+
+            results.append({
+                "matched_line": line,
+                "line_number": i,
+                "context": context,
+            })
+
+    return results
