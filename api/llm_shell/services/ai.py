@@ -1,5 +1,35 @@
 """AI service for Claude API integration."""
 
+import asyncio
+import logging
+from typing import TYPE_CHECKING, Any
+
+from anthropic import (
+    APIConnectionError,
+    APITimeoutError,
+    AsyncAnthropic,
+    AuthenticationError,
+    InternalServerError,
+    RateLimitError,
+)
+
+from llm_shell.exceptions import (
+    AIAuthFailedError,
+    AIRateLimitedError,
+    AITimeoutError,
+    AIUnavailableError,
+)
+from llm_shell.services.security import get_secret
+
+if TYPE_CHECKING:
+    from llm_shell.services.settings import SettingsService
+
+logger = logging.getLogger(__name__)
+
+# Retry configuration
+MAX_RETRIES = 2
+RETRY_DELAYS = [1, 3]  # seconds
+
 TOOLS = [
     {
         "name": "suggest_command",
@@ -181,3 +211,88 @@ def build_context(session: dict, settings: dict) -> str:
         parts.append("(无输出)")
 
     return "\n".join(parts)
+
+
+async def call_claude_api(
+    messages: list[dict[str, Any]],
+    settings_service: "SettingsService",
+) -> Any:
+    """Call Claude API with retry logic.
+
+    Args:
+        messages: List of message dicts for the conversation.
+        settings_service: Settings service to get model and base_url.
+
+    Returns:
+        Claude API response object.
+
+    Raises:
+        AIAuthFailedError: If API key is invalid (no retry).
+        AIRateLimitedError: If rate limited after all retries.
+        AITimeoutError: If request times out after all retries.
+        AIUnavailableError: If service is unavailable after all retries.
+    """
+    # Get settings
+    settings = await settings_service.get_all()
+    model = settings.model
+    base_url = settings.base_url if settings.base_url else None
+
+    # Get API key from keyring
+    api_key = get_secret("api_key")
+    if not api_key:
+        raise AIAuthFailedError()
+
+    # Create client with settings
+    client_kwargs: dict[str, Any] = {
+        "api_key": api_key,
+        "timeout": 30,
+    }
+    if base_url:
+        client_kwargs["base_url"] = base_url
+
+    client = AsyncAnthropic(**client_kwargs)
+
+    # Retry loop
+    attempt = 0
+    while True:
+        try:
+            response = await client.messages.create(
+                model=model,
+                max_tokens=1024,
+                messages=messages,
+                system=SYSTEM_PROMPT,
+                tools=TOOLS,
+            )
+            return response
+
+        except AuthenticationError as e:
+            # Authentication errors should not be retried
+            logger.error(f"Claude API authentication failed: {e}")
+            raise AIAuthFailedError() from e
+
+        except RateLimitError as e:
+            attempt += 1
+            if attempt > MAX_RETRIES:
+                logger.error(f"Claude API rate limited after {attempt} attempts")
+                raise AIRateLimitedError() from e
+            delay = RETRY_DELAYS[attempt - 1]
+            logger.warning(f"Claude API rate limited, retrying in {delay}s (attempt {attempt})")
+            await asyncio.sleep(delay)
+
+        except APITimeoutError as e:
+            attempt += 1
+            if attempt > MAX_RETRIES:
+                logger.error(f"Claude API timeout after {attempt} attempts")
+                raise AITimeoutError() from e
+            delay = RETRY_DELAYS[attempt - 1]
+            logger.warning(f"Claude API timeout, retrying in {delay}s (attempt {attempt})")
+            await asyncio.sleep(delay)
+
+        except (APIConnectionError, InternalServerError) as e:
+            attempt += 1
+            if attempt > MAX_RETRIES:
+                logger.error(f"Claude API unavailable after {attempt} attempts: {e}")
+                raise AIUnavailableError() from e
+            delay = RETRY_DELAYS[attempt - 1]
+            logger.warning(f"Claude API error, retrying in {delay}s (attempt {attempt}): {e}")
+            await asyncio.sleep(delay)
