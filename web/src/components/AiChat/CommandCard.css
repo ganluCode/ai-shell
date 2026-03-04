@@ -1,0 +1,43 @@
+/* CommandCard - Placeholder styles for F-003 */
+/* Full implementation will be done in F-005 */
+
+.command-card {
+  background-color: var(--bg-secondary, #2d2d30);
+  border-left: 3px solid var(--command-border-color, #4caf50);
+  border-radius: 4px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.command-card[data-risk-level="low"] {
+  --command-border-color: #4caf50;
+}
+
+.command-card[data-risk-level="medium"] {
+  --command-border-color: #ff9800;
+}
+
+.command-card[data-risk-level="high"] {
+  --command-border-color: #f44336;
+}
+
+.command-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.command-text {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  background-color: var(--bg-tertiary, #1e1e1e);
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: var(--text-primary, #e0e0e0);
+}
+
+.command-explanation {
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  margin: 0;
+}
