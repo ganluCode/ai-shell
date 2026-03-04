@@ -1,0 +1,268 @@
+/* CommandListCard - Component for multiple commands display (F-006) */
+
+.command-list-card {
+  background-color: var(--bg-secondary, #2d2d30);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+/* Header */
+.command-list-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #e0e0e0);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color, #444);
+}
+
+/* Command list */
+.command-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: none;
+}
+
+.command-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  background-color: var(--bg-tertiary, #1e1e1e);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.command-list-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Index number */
+.command-index {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #888);
+  min-width: 20px;
+  flex-shrink: 0;
+}
+
+/* Command item content */
+.command-item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.command-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Command text */
+.command-text {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  color: var(--text-primary, #e0e0e0);
+  word-break: break-all;
+  flex: 1;
+}
+
+/* Risk level tags */
+.risk-tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.risk-low {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.risk-medium {
+  background-color: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+.risk-high {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+/* Explanation */
+.command-explanation {
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  margin: 0;
+}
+
+/* Status indicators */
+.command-item-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+}
+
+.status-running {
+  background-color: rgba(0, 120, 212, 0.2);
+  color: #0078d4;
+}
+
+.status-done {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.status-error {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.status-skipped {
+  background-color: rgba(158, 158, 158, 0.2);
+  color: #9e9e9e;
+}
+
+/* Action buttons for each command */
+.command-item-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.action-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.execute-btn {
+  background-color: #0078d4;
+  color: white;
+}
+
+.execute-btn:hover {
+  background-color: #106ebe;
+}
+
+.edit-btn {
+  background-color: transparent;
+  color: var(--text-secondary, #888);
+  border: 1px solid var(--border-color, #444);
+}
+
+.edit-btn:hover {
+  background-color: var(--bg-tertiary, #1e1e1e);
+  color: var(--text-primary, #e0e0e0);
+}
+
+.remove-btn {
+  background-color: transparent;
+  color: var(--text-secondary, #888);
+  border: 1px solid var(--border-color, #444);
+  padding: 4px 8px;
+}
+
+.remove-btn:hover {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+  border-color: #f44336;
+}
+
+.skip-btn {
+  background-color: transparent;
+  color: var(--text-secondary, #888);
+  border: 1px solid var(--border-color, #444);
+}
+
+.skip-btn:hover {
+  background-color: var(--bg-tertiary, #1e1e1e);
+  color: var(--text-primary, #e0e0e0);
+}
+
+/* Edit input */
+.command-edit-input {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  background-color: var(--bg-tertiary, #1e1e1e);
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--text-primary, #e0e0e0);
+  border: 1px solid var(--accent-color, #0078d4);
+  outline: none;
+  flex: 1;
+}
+
+.command-edit-input:focus {
+  border-color: var(--accent-color, #0078d4);
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.3);
+}
+
+/* Bottom action buttons */
+.command-list-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, #444);
+}
+
+.list-action-btn {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.execute-all-btn {
+  background-color: #0078d4;
+  color: white;
+}
+
+.execute-all-btn:hover {
+  background-color: #106ebe;
+}
+
+.execute-one-btn {
+  background-color: transparent;
+  color: var(--text-primary, #e0e0e0);
+  border: 1px solid var(--border-color, #444);
+}
+
+.execute-one-btn:hover {
+  background-color: var(--bg-tertiary, #1e1e1e);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .command-list-card {
+    padding: 12px;
+  }
+
+  .command-item-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .command-list-actions {
+    flex-direction: column;
+  }
+}
