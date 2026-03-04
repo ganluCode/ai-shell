@@ -2,7 +2,8 @@
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any
+from collections import deque
+from typing import TYPE_CHECKING, Any, AsyncGenerator
 
 from anthropic import (
     APIConnectionError,
@@ -19,7 +20,8 @@ from llm_shell.exceptions import (
     AITimeoutError,
     AIUnavailableError,
 )
-from llm_shell.services.security import get_secret
+from llm_shell.services.output_buffer import search_output_buffer
+from llm_shell.services.security import check_command_safety, get_secret
 
 if TYPE_CHECKING:
     from llm_shell.services.settings import SettingsService
@@ -296,3 +298,205 @@ async def call_claude_api(
             delay = RETRY_DELAYS[attempt - 1]
             logger.warning(f"Claude API error, retrying in {delay}s (attempt {attempt}): {e}")
             await asyncio.sleep(delay)
+
+
+async def chat(
+    session: dict,
+    history: deque,
+    user_message: str,
+    settings_service: "SettingsService",
+) -> AsyncGenerator[dict[str, Any], None]:
+    """Chat with Claude AI assistant.
+
+    An async generator that handles the conversation with Claude API,
+    including tool use for command suggestions and terminal output search.
+
+    Args:
+        session: Session dict containing server_info and output_buffer.
+        history: Conversation history as a deque (maxlen=20 recommended).
+        user_message: The user's message.
+        settings_service: Settings service to get configuration.
+
+    Yields:
+        Event dicts with types:
+        - {"type": "text", "content": "..."} for text responses
+        - {"type": "command", "command": "...", "explanation": "...", "risk_level": "..."}
+        - {"type": "commands", "commands": [...]} for multiple command options
+    """
+    # Get settings
+    settings = await settings_service.get_all()
+    settings_dict = {
+        "context_lines": int(settings.context_lines) if settings.context_lines else 50,
+    }
+
+    # Build context from session
+    context = build_context(session, settings_dict)
+
+    # Build initial messages
+    messages: list[dict[str, Any]] = []
+
+    # Add conversation history
+    for msg in history:
+        messages.append(dict(msg))
+
+    # Add current user message with context
+    messages.append({
+        "role": "user",
+        "content": f"{context}\n\n用户请求: {user_message}",
+    })
+
+    # Add user message to history
+    history.append({"role": "user", "content": user_message})
+
+    # Tool use loop
+    while True:
+        response = await call_claude_api(messages, settings_service)
+
+        # Check for tool use
+        tool_use_blocks = [
+            block for block in response.content if getattr(block, "type", None) == "tool_use"
+        ]
+
+        if not tool_use_blocks:
+            # No tool use - yield text response
+            text_content = ""
+            for block in response.content:
+                if hasattr(block, "text"):
+                    text_content += block.text
+
+            if text_content:
+                yield {"type": "text", "content": text_content}
+                # Add assistant response to history
+                history.append({"role": "assistant", "content": text_content})
+
+            break
+
+        # Process tool uses
+        assistant_content: list[dict[str, Any]] = []
+        tool_results: list[dict[str, Any]] = []
+
+        for tool_use in tool_use_blocks:
+            tool_name = tool_use.name
+            tool_input = tool_use.input
+            tool_id = tool_use.id
+
+            # Record assistant's tool use
+            assistant_content.append({
+                "type": "tool_use",
+                "id": tool_id,
+                "name": tool_name,
+                "input": tool_input,
+            })
+
+            if tool_name == "search_terminal_output":
+                # Execute terminal output search
+                pattern = tool_input.get("pattern", "")
+                context_lines = tool_input.get("context_lines", 3)
+                output_buffer = session.get("output_buffer", [])
+
+                matches = search_output_buffer(output_buffer, pattern, context_lines)
+
+                # Format search results
+                if matches:
+                    result_text = "搜索结果:\n"
+                    for match in matches:
+                        result_text += f"\n行 {match['line_number']}: {match['matched_line']}\n"
+                        result_text += "上下文:\n" + "\n".join(match["context"]) + "\n"
+                else:
+                    result_text = f"未找到匹配 '{pattern}' 的结果"
+
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool_id,
+                    "content": result_text,
+                })
+
+            elif tool_name == "suggest_command":
+                # Apply safety check
+                command = tool_input.get("command", "")
+                explanation = tool_input.get("explanation", "")
+                risk_level = tool_input.get("risk_level", "low")
+
+                safety_result = check_command_safety(command)
+
+                if safety_result["status"] == "blocked":
+                    # Blocked command - yield text event explaining block
+                    yield {
+                        "type": "text",
+                        "content": f"命令 '{command}' 被安全策略阻止: {safety_result['reason']}",
+                    }
+                    history.append({
+                        "role": "assistant",
+                        "content": f"Blocked command: {command}",
+                    })
+                    return
+
+                # Override risk level if high risk detected
+                if safety_result["status"] == "high":
+                    risk_level = "high"
+
+                # Yield command event
+                yield {
+                    "type": "command",
+                    "command": command,
+                    "explanation": explanation,
+                    "risk_level": risk_level,
+                }
+                history.append({
+                    "role": "assistant",
+                    "content": f"Suggested command: {command}",
+                })
+                return
+
+            elif tool_name == "suggest_commands":
+                # Apply safety check to each command
+                commands = tool_input.get("commands", [])
+                processed_commands = []
+
+                for cmd in commands:
+                    command = cmd.get("command", "")
+                    explanation = cmd.get("explanation", "")
+                    risk_level = cmd.get("risk_level", "low")
+
+                    safety_result = check_command_safety(command)
+
+                    if safety_result["status"] == "blocked":
+                        # Skip blocked commands but note them
+                        continue
+
+                    # Override risk level if high risk detected
+                    if safety_result["status"] == "high":
+                        risk_level = "high"
+
+                    processed_commands.append({
+                        "command": command,
+                        "explanation": explanation,
+                        "risk_level": risk_level,
+                    })
+
+                if processed_commands:
+                    yield {
+                        "type": "commands",
+                        "commands": processed_commands,
+                    }
+                    history.append({
+                        "role": "assistant",
+                        "content": f"Suggested {len(processed_commands)} commands",
+                    })
+                return
+
+            else:
+                # Unknown tool - return error
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool_id,
+                    "content": f"Unknown tool: {tool_name}",
+                    "is_error": True,
+                })
+
+        # Add assistant message with tool use to conversation
+        messages.append({"role": "assistant", "content": assistant_content})
+
+        # Add tool results as user message
+        if tool_results:
+            messages.append({"role": "user", "content": tool_results})
