@@ -1,5 +1,4 @@
-/* CommandCard - Placeholder styles for F-003 */
-/* Full implementation will be done in F-005 */
+/* CommandCard - Full implementation for F-005 */
 
 .command-card {
   background-color: var(--bg-secondary, #2d2d30);
@@ -9,6 +8,7 @@
   margin-top: 8px;
 }
 
+/* Risk level borders */
 .command-card[data-risk-level="low"] {
   --command-border-color: #4caf50;
 }
@@ -24,9 +24,17 @@
 .command-card-content {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
+/* Warning text for high risk */
+.command-warning {
+  color: #f44336;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Command text display */
 .command-text {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 13px;
@@ -34,10 +42,118 @@
   padding: 8px 12px;
   border-radius: 4px;
   color: var(--text-primary, #e0e0e0);
+  word-break: break-all;
 }
 
+/* Edit input */
+.command-edit-input {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  background-color: var(--bg-tertiary, #1e1e1e);
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: var(--text-primary, #e0e0e0);
+  border: 1px solid var(--accent-color, #0078d4);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.command-edit-input:focus {
+  border-color: var(--accent-color, #0078d4);
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.3);
+}
+
+/* Explanation text */
 .command-explanation {
   font-size: 12px;
   color: var(--text-secondary, #888);
   margin: 0;
+}
+
+/* Status display */
+.command-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+}
+
+.status-running {
+  background-color: rgba(0, 120, 212, 0.2);
+  color: #0078d4;
+}
+
+.status-done {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.status-error {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.status-skipped {
+  background-color: rgba(158, 158, 158, 0.2);
+  color: #9e9e9e;
+}
+
+/* Action buttons */
+.command-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.command-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.execute-btn {
+  background-color: #0078d4;
+  color: white;
+}
+
+.execute-btn:hover {
+  background-color: #106ebe;
+}
+
+/* High risk execute button */
+.command-card[data-risk-level="high"] .execute-btn {
+  background-color: #f44336;
+}
+
+.command-card[data-risk-level="high"] .execute-btn:hover {
+  background-color: #d32f2f;
+}
+
+.edit-btn {
+  background-color: transparent;
+  color: var(--text-secondary, #888);
+  border: 1px solid var(--border-color, #444);
+}
+
+.edit-btn:hover {
+  background-color: var(--bg-tertiary, #1e1e1e);
+  color: var(--text-primary, #e0e0e0);
+}
+
+.skip-btn {
+  background-color: transparent;
+  color: var(--text-secondary, #888);
+  border: 1px solid var(--border-color, #444);
+}
+
+.skip-btn:hover {
+  background-color: var(--bg-tertiary, #1e1e1e);
+  color: var(--text-primary, #e0e0e0);
 }
