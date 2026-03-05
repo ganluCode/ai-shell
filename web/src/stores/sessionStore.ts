@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Session, ConnectionStatus } from '../types'
+import type { Session, ConnectionStatus, ChatMessage, CommandItem } from '../types'
 
 // Generate a unique session ID
 function generateSessionId(): string {
@@ -17,6 +17,19 @@ interface SessionActions {
   closeSession: (sessionId: string) => void
   setActiveSession: (sessionId: string | null) => void
   updateStatus: (sessionId: string, status: ConnectionStatus) => void
+  // F-002: Chat message and command queue actions
+  addChatMessage: (sessionId: string, message: ChatMessage) => void
+  updateLastChatMessage: (
+    sessionId: string,
+    updater: (message: ChatMessage) => ChatMessage
+  ) => void
+  setCommandQueue: (sessionId: string, queue: CommandItem[] | null) => void
+  updateCommandItem: (
+    sessionId: string,
+    itemId: string,
+    updates: Partial<CommandItem>
+  ) => void
+  clearCommandQueue: (sessionId: string) => void
 }
 
 type SessionStore = SessionState & SessionActions
@@ -41,6 +54,8 @@ export const useSessionStore = create<SessionStore>((set) => ({
       id: sessionId,
       server_id: serverId,
       status: 'connecting',
+      chatMessages: [],
+      commandQueue: null,
     }
 
     set((state) => ({
@@ -77,6 +92,101 @@ export const useSessionStore = create<SessionStore>((set) => ({
           [sessionId]: {
             ...session,
             status,
+          },
+        },
+      }
+    }),
+
+  // F-002: Chat message actions
+  addChatMessage: (sessionId: string, message: ChatMessage) =>
+    set((state) => {
+      const session = state.sessions[sessionId]
+      if (!session) return state
+
+      return {
+        sessions: {
+          ...state.sessions,
+          [sessionId]: {
+            ...session,
+            chatMessages: [...session.chatMessages, message],
+          },
+        },
+      }
+    }),
+
+  updateLastChatMessage: (
+    sessionId: string,
+    updater: (message: ChatMessage) => ChatMessage
+  ) =>
+    set((state) => {
+      const session = state.sessions[sessionId]
+      if (!session || session.chatMessages.length === 0) return state
+
+      const messages = [...session.chatMessages]
+      const lastIndex = messages.length - 1
+      messages[lastIndex] = updater(messages[lastIndex])
+
+      return {
+        sessions: {
+          ...state.sessions,
+          [sessionId]: {
+            ...session,
+            chatMessages: messages,
+          },
+        },
+      }
+    }),
+
+  // F-002: Command queue actions
+  setCommandQueue: (sessionId: string, queue: CommandItem[] | null) =>
+    set((state) => {
+      const session = state.sessions[sessionId]
+      if (!session) return state
+
+      return {
+        sessions: {
+          ...state.sessions,
+          [sessionId]: {
+            ...session,
+            commandQueue: queue,
+          },
+        },
+      }
+    }),
+
+  updateCommandItem: (
+    sessionId: string,
+    itemId: string,
+    updates: Partial<CommandItem>
+  ) =>
+    set((state) => {
+      const session = state.sessions[sessionId]
+      if (!session || !session.commandQueue) return state
+
+      return {
+        sessions: {
+          ...state.sessions,
+          [sessionId]: {
+            ...session,
+            commandQueue: session.commandQueue.map((item) =>
+              item.id === itemId ? { ...item, ...updates } : item
+            ),
+          },
+        },
+      }
+    }),
+
+  clearCommandQueue: (sessionId: string) =>
+    set((state) => {
+      const session = state.sessions[sessionId]
+      if (!session) return state
+
+      return {
+        sessions: {
+          ...state.sessions,
+          [sessionId]: {
+            ...session,
+            commandQueue: null,
           },
         },
       }

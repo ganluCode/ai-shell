@@ -235,18 +235,8 @@ export async function importSSHConfig(
 // AI Chat API (SSE)
 // ============================================================================
 
-/**
- * Start an AI chat session (returns EventSource-like interface)
- * Note: Uses POST with SSE response, handled via fetch + ReadableStream
- */
-export async function chat(
-  _sessionId: string,
-  _message: string
-): Promise<void> {
-  // Placeholder - SSE streaming will be implemented when needed
-  // This signature matches the expected interface
-  throw new Error('SSE chat not yet implemented');
-}
+// Note: SSE streaming for AI chat is implemented in useChat hook
+// using fetch + ReadableStream (EventSource doesn't support POST requests)
 
 // For type compatibility with ChatRequest
 export type { ChatRequest };

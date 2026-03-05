@@ -2,8 +2,27 @@
 
 ## Project: web (ai-shell-web)
 
-**Date**: 2026-03-04
-**Status**: Feature 04 Terminal Components Completed
+**Date**: 2026-03-05
+**Status**: F-001 SSE Chat Hook Completed
+
+---
+
+## Session 2026-03-05
+
+### F-001: Create SSE hook (useChat.ts) ✅
+- Created `hooks/useChat.ts` with SSE streaming support
+- `sendMessage(sessionId, message)` sends POST to `/api/assistant/chat`
+- Uses `fetch` + `ReadableStream` (not native EventSource) for POST requests
+- Parses SSE events: `text`, `command`, `commands`, `error`, `done`
+- `text` events accumulate to AI message content in real-time
+- `command` event creates single `CommandSuggestion`
+- `commands` event creates `CommandSuggestion[]` array
+- `error` event triggers error callback
+- `done` event marks message as complete
+- `chatMessages` state updated in real-time during streaming
+- Added 13 comprehensive tests in `hooks/useChat.test.ts`
+- Cleaned up unused placeholder `chat()` function in `api.ts`
+- All 216 tests pass
 
 ---
 
@@ -39,7 +58,8 @@ src/
 │   │   └── StatusOverlay.tsx
 │   └── common/
 ├── hooks/          # Custom React hooks
-│   └── useTerminalWS.ts  # NEW: WebSocket hook
+│   ├── useTerminalWS.ts  # WebSocket hook
+│   └── useChat.ts        # NEW: SSE chat hook
 ├── pages/          # Route-level views
 ├── services/       # API services
 ├── stores/         # Zustand state stores
@@ -105,7 +125,7 @@ src/
 | `npm run dev` | Start development server (port 5173) |
 | `npm run build` | Type-check and build for production |
 | `npm run lint` | Run ESLint |
-| `npm test` | Run tests once (203 tests) |
+| `npm test` | Run tests once (216 tests) |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run preview` | Preview production build |
 
@@ -116,6 +136,6 @@ src/
 - The project uses npm as the package manager
 - API proxy configured to forward `/api/*` requests to `http://localhost:8765`
 - Test setup includes `@testing-library/jest-dom` matchers
-- ESLint found 2 pre-existing unused variable warnings in `api.ts` (not blocking)
-- All 203 tests pass
+- All 216 tests pass
 - Build succeeds
+- Lint passes

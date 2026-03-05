@@ -1,0 +1,131 @@
+/* MessageList Container */
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Empty State */
+.message-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 24px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary, #888);
+}
+
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.6;
+}
+
+.empty-text {
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Message Container */
+.message {
+  display: flex;
+  width: 100%;
+  animation: message-fade-in 0.2s ease-out;
+}
+
+@keyframes message-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* User Message - Right Aligned with Blue Style */
+.message-user {
+  justify-content: flex-end;
+}
+
+.message-user .message-bubble {
+  background-color: var(--message-user-bg, #0078d4);
+  color: var(--message-user-text, #ffffff);
+  border-radius: 16px 16px 4px 16px;
+  max-width: 80%;
+}
+
+/* AI Message - Left Aligned with Gray Style */
+.message-assistant {
+  justify-content: flex-start;
+}
+
+.message-assistant .message-bubble {
+  background-color: var(--message-assistant-bg, #3c3c3c);
+  color: var(--message-assistant-text, #e0e0e0);
+  border-radius: 16px 16px 16px 4px;
+  max-width: 85%;
+}
+
+/* Message Bubble */
+.message-bubble {
+  padding: 12px 16px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Message Content */
+.message-content {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* Streaming Indicator */
+.message-bubble.streaming .message-content::after {
+  content: '▋';
+  animation: cursor-blink 1s infinite;
+  margin-left: 2px;
+  color: var(--accent-color, #0078d4);
+}
+
+@keyframes cursor-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* Command Suggestions Container */
+.message-suggestions {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .message-list {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .message-user .message-bubble,
+  .message-assistant .message-bubble {
+    max-width: 90%;
+    padding: 10px 12px;
+  }
+}
