@@ -1,0 +1,137 @@
+/* FileTransferCard - SFTP download/upload interactions */
+
+.file-transfer-card {
+  background-color: var(--bg-secondary, #2d2d30);
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid var(--border-color, #444);
+}
+
+.file-transfer-card[data-mode="download"] {
+  border-left: 3px solid #4caf50;
+}
+
+.file-transfer-card[data-mode="upload"] {
+  border-left: 3px solid #2196f3;
+}
+
+.transfer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.transfer-icon {
+  font-size: 20px;
+  font-weight: bold;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.download-icon {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.upload-icon {
+  background-color: rgba(33, 150, 243, 0.2);
+  color: #2196f3;
+}
+
+.transfer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filename {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  color: var(--text-primary, #e0e0e0);
+  word-break: break-all;
+}
+
+.target-path {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  word-break: break-all;
+}
+
+.selected-file {
+  font-size: 12px;
+  color: var(--text-primary, #e0e0e0);
+  margin-top: 4px;
+}
+
+/* Hidden file input */
+.file-input-hidden {
+  display: none;
+}
+
+/* Upload progress */
+.upload-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.progress-bar {
+  height: 6px;
+  background-color: #2196f3;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  text-align: right;
+}
+
+/* Upload complete state */
+.upload-complete {
+  font-size: 12px;
+  color: #4caf50;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Action buttons */
+.transfer-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+  width: fit-content;
+}
+
+.download-btn {
+  background-color: #4caf50;
+  color: white;
+}
+
+.download-btn:hover {
+  background-color: #43a047;
+}
+
+.upload-btn {
+  background-color: #2196f3;
+  color: white;
+}
+
+.upload-btn:hover {
+  background-color: #1e88e5;
+}
+
+.upload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
