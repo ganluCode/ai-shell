@@ -1,16 +1,19 @@
-"""Sessions API routes - WebSocket terminal endpoint."""
+"""Sessions API routes - WebSocket terminal endpoint and SFTP file transfer."""
 
 import asyncio
 import json
 import logging
+import os
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
 
 from llm_shell.db.database import Database, get_database
-from llm_shell.exceptions import AppError, SSHError
+from llm_shell.exceptions import AppError, NotFoundError, SSHError
 from llm_shell.services.reconnection import ReconnectionHandler
 from llm_shell.services.session_manager import SessionManager, get_shared_session_manager
+from llm_shell.services import sftp
 
 logger = logging.getLogger(__name__)
 
@@ -315,3 +318,109 @@ async def terminal_websocket(
 
     handler = TerminalWebSocketHandler(websocket, session_manager, server_id, db)
     await handler.run()
+
+
+@router.get("/sessions/{session_id}/download")
+async def download_file(
+    session_id: str,
+    path: Annotated[str, Query(description="Remote file path to download")],
+    session_manager: Annotated[SessionManager, Depends(get_session_manager)],
+) -> FileResponse:
+    """Download a file from the remote server via SFTP.
+
+    Downloads the specified file from the remote server and returns it
+    as a file stream with application/octet-stream content type.
+
+    Args:
+        session_id: ID of the active SSH session.
+        path: Remote file path to download.
+        session_manager: Session manager for SSH connections.
+
+    Returns:
+        FileResponse with the downloaded file.
+
+    Raises:
+        HTTPException: 404 if session not found, 500 if download fails.
+    """
+    # Get the active session
+    session = session_manager.get_session(session_id)
+    if session is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": {"code": "NOT_FOUND", "message": "Session not found"}},
+        )
+
+    try:
+        # Download file via SFTP
+        local_path = await sftp.download_file(session.connection, path)
+
+        # Get filename from path for Content-Disposition header
+        filename = os.path.basename(path)
+
+        return FileResponse(
+            path=local_path,
+            media_type="application/octet-stream",
+            filename=filename,
+        )
+    except Exception as e:
+        logger.error(f"Failed to download file {path}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": {"code": "DOWNLOAD_FAILED", "message": str(e)}},
+        )
+
+
+@router.post("/sessions/{session_id}/upload")
+async def upload_file(
+    session_id: str,
+    path: Annotated[str, Query(description="Remote destination path")],
+    file: Annotated[UploadFile, File(description="File to upload")],
+    session_manager: Annotated[SessionManager, Depends(get_session_manager)],
+) -> dict[str, Any]:
+    """Upload a file to the remote server via SFTP.
+
+    Accepts a file via multipart/form-data and uploads it to the specified
+    remote path on the server.
+
+    Args:
+        session_id: ID of the active SSH session.
+        path: Remote destination path for the file.
+        file: The file to upload.
+        session_manager: Session manager for SSH connections.
+
+    Returns:
+        Dictionary with remote_path and size of uploaded file.
+
+    Raises:
+        HTTPException: 404 if session not found, 500 if upload fails.
+    """
+    # Get the active session
+    session = session_manager.get_session(session_id)
+    if session is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": {"code": "NOT_FOUND", "message": "Session not found"}},
+        )
+
+    try:
+        # Save uploaded file to temp location
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            content = await file.read()
+            tmp.write(content)
+            local_path = tmp.name
+
+        # Upload file via SFTP
+        result = await sftp.upload_file(session.connection, local_path, path)
+
+        # Clean up temp file
+        os.unlink(local_path)
+
+        return result
+    except Exception as e:
+        logger.error(f"Failed to upload file to {path}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": {"code": "UPLOAD_FAILED", "message": str(e)}},
+        )

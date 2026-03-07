@@ -2,10 +2,12 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from llm_shell.config import get_settings
 from llm_shell.db.database import close_database, get_database
@@ -73,3 +75,35 @@ app.include_router(keypairs.router, prefix="/api", tags=["keypairs"])
 app.include_router(servers.router, prefix="/api", tags=["servers"])
 app.include_router(settings_api.router, prefix="/api", tags=["settings"])
 app.include_router(sessions.router, prefix="/api", tags=["sessions"])
+
+
+# Static file serving and SPA fallback
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+def get_static_dir() -> Path | None:
+    """Get static directory if it exists."""
+    if STATIC_DIR.exists() and STATIC_DIR.is_dir():
+        return STATIC_DIR
+    return None
+
+
+# Mount static files if the directory exists
+static_dir = get_static_dir()
+if static_dir is not None:
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+
+
+# SPA fallback route - serve index.html for non-API routes
+@app.get("/{full_path:path}", include_in_schema=False, response_model=None)
+async def serve_spa(request: Request, full_path: str) -> FileResponse:
+    """Serve SPA index.html for non-API routes."""
+    static_dir = get_static_dir()
+    if static_dir is not None:
+        index_path = static_dir / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
+    # Return a simple 404 response if no static files
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse({"error": "Not found"}, status_code=404)
