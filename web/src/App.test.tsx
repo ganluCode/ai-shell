@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import { useToastStore, addToast } from './stores/toastStore'
 
 // Mock the uiStore
 const mockOpenSettings = vi.fn()
@@ -43,6 +44,10 @@ function createWrapper() {
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset toast store to initial state
+    act(() => {
+      useToastStore.setState({ toasts: [] })
+    })
   })
 
   afterEach(() => {
@@ -79,6 +84,39 @@ describe('App', () => {
       await user.click(headerSettingsButton)
 
       expect(mockOpenSettings).toHaveBeenCalled()
+    })
+  })
+
+  describe('F-003: Global Toast component', () => {
+    it('Toast component renders at app root level', () => {
+      // Add a toast to make the container visible
+      act(() => {
+        addToast('info', 'Test toast')
+      })
+
+      render(<App />, { wrapper: createWrapper() })
+
+      // Toast container should be present in the DOM
+      const toastContainer = screen.getByTestId('toast-container')
+      expect(toastContainer).toBeInTheDocument()
+    })
+
+    it('Toasts from anywhere in app are visible', async () => {
+      render(<App />, { wrapper: createWrapper() })
+
+      // Initially no toasts visible
+      expect(screen.queryByTestId('toast-container')).not.toBeInTheDocument()
+
+      // Simulate adding a toast from anywhere in the app
+      act(() => {
+        addToast('success', 'Server connected')
+      })
+
+      // The toast should appear in the app
+      await waitFor(() => {
+        expect(screen.getByTestId('toast-container')).toBeInTheDocument()
+        expect(screen.getByText('Server connected')).toBeInTheDocument()
+      })
     })
   })
 })
