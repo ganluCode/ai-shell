@@ -17,8 +17,10 @@ import {
   deleteKeyPair,
   getSettings,
   updateSettings,
+  previewSSHConfig,
+  importSSHConfig,
 } from './api'
-import type { ServerGroup, Server, KeyPair, Settings } from '../types'
+import type { ServerGroup, Server, KeyPair, Settings, SSHConfigEntry, SSHConfigImportResult } from '../types'
 
 describe('api', () => {
   describe('BASE_URL', () => {
@@ -574,6 +576,192 @@ describe('api', () => {
           expect(error).toBeInstanceOf(ApiError)
           expect((error as ApiError).code).toBe('VALIDATION_ERROR')
           expect((error as ApiError).message).toBe('Invalid terminal_size')
+        }
+      })
+    })
+  })
+
+  // ============================================================================
+  // SSH Config Import API Tests
+  // ============================================================================
+
+  describe('SSH Config Import API', () => {
+    const mockSSHConfigEntry: SSHConfigEntry = {
+      label: 'prod-web-01',
+      host: '192.168.1.100',
+      username: 'root',
+      port: 2222,
+      identity_file: '/Users/x/.ssh/id_rsa',
+      proxy_jump: null,
+      already_exists: false,
+    }
+
+    const mockServer: Server = {
+      id: 'server-1',
+      group_id: null,
+      label: 'prod-web-01',
+      host: '192.168.1.100',
+      port: 2222,
+      username: 'root',
+      auth_type: 'key',
+      key_id: 'key-1',
+      proxy_jump: null,
+      startup_cmd: null,
+      notes: null,
+      color: null,
+      sort_order: 0,
+      last_connected_at: null,
+      created_at: '2025-01-15T10:00:00Z',
+      updated_at: '2025-01-15T10:00:00Z',
+    }
+
+    beforeEach(() => {
+      vi.stubGlobal('fetch', vi.fn())
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    describe('previewSSHConfig', () => {
+      it('makes GET request to /api/import/ssh-config/preview', async () => {
+        const mockResponse = { entries: [mockSSHConfigEntry] }
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockResponse,
+        } as Response)
+
+        const result = await previewSSHConfig()
+
+        expect(result).toEqual(mockResponse)
+        expect(fetch).toHaveBeenCalledWith('/api/import/ssh-config/preview', expect.objectContaining({
+          headers: { 'Content-Type': 'application/json' },
+        }))
+      })
+
+      it('returns typed response with entries array', async () => {
+        const entries: SSHConfigEntry[] = [
+          mockSSHConfigEntry,
+          {
+            label: 'staging-app',
+            host: '10.0.0.5',
+            username: 'deploy',
+            port: 22,
+            identity_file: null,
+            proxy_jump: 'bastion',
+            already_exists: true,
+          },
+        ]
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ entries }),
+        } as Response)
+
+        const result = await previewSSHConfig()
+
+        expect(result.entries).toHaveLength(2)
+        expect(result.entries[0].label).toBe('prod-web-01')
+        expect(result.entries[1].already_exists).toBe(true)
+      })
+
+      it('throws ApiError on 500 response', async () => {
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({
+            error: { code: 'INTERNAL_ERROR', message: 'Failed to parse SSH config' },
+          }),
+        } as Response)
+
+        try {
+          await previewSSHConfig()
+          expect.fail('Expected ApiError to be thrown')
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError)
+          expect((error as ApiError).code).toBe('INTERNAL_ERROR')
+        }
+      })
+    })
+
+    describe('importSSHConfig', () => {
+      it('makes POST request to /api/import/ssh-config with selected entries', async () => {
+        const selected = ['prod-web-01', 'staging-app']
+        const mockResult: SSHConfigImportResult = {
+          imported: 2,
+          servers: [mockServer],
+        }
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockResult,
+        } as Response)
+
+        const result = await importSSHConfig(selected)
+
+        expect(result).toEqual(mockResult)
+        expect(fetch).toHaveBeenCalledWith('/api/import/ssh-config', expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ selected }),
+        }))
+      })
+
+      it('returns typed response with imported count and servers', async () => {
+        const selected = ['prod-web-01']
+        const mockResult: SSHConfigImportResult = {
+          imported: 1,
+          servers: [mockServer],
+        }
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockResult,
+        } as Response)
+
+        const result = await importSSHConfig(selected)
+
+        expect(result.imported).toBe(1)
+        expect(result.servers).toHaveLength(1)
+        expect(result.servers[0].label).toBe('prod-web-01')
+      })
+
+      it('handles empty selection', async () => {
+        const mockResult: SSHConfigImportResult = {
+          imported: 0,
+          servers: [],
+        }
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockResult,
+        } as Response)
+
+        const result = await importSSHConfig([])
+
+        expect(result.imported).toBe(0)
+        expect(result.servers).toHaveLength(0)
+        expect(fetch).toHaveBeenCalledWith('/api/import/ssh-config', expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ selected: [] }),
+        }))
+      })
+
+      it('throws ApiError on 400 validation error', async () => {
+        vi.mocked(fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          json: async () => ({
+            error: { code: 'VALIDATION_ERROR', message: 'Invalid entry label' },
+          }),
+        } as Response)
+
+        try {
+          await importSSHConfig(['invalid-label'])
+          expect.fail('Expected ApiError to be thrown')
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError)
+          expect((error as ApiError).code).toBe('VALIDATION_ERROR')
         }
       })
     })
