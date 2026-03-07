@@ -232,6 +232,20 @@ export async function importSSHConfig(
 }
 
 // ============================================================================
+// Health Check API
+// ============================================================================
+
+/** Health check response */
+export interface HealthResponse {
+  status: 'ok' | 'error';
+}
+
+/** Check server health status */
+export async function checkHealth(): Promise<HealthResponse> {
+  return request<HealthResponse>('/health');
+}
+
+// ============================================================================
 // AI Chat API (SSE)
 // ============================================================================
 

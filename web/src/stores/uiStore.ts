@@ -4,6 +4,7 @@ interface UIState {
   settingsOpen: boolean
   serverFormOpen: boolean
   editingServerId: string | null
+  sshConfigImportOpen: boolean
 }
 
 interface UIActions {
@@ -11,6 +12,8 @@ interface UIActions {
   closeSettings: () => void
   openServerForm: (serverId?: string) => void
   closeServerForm: () => void
+  openSSHConfigImport: () => void
+  closeSSHConfigImport: () => void
 }
 
 type UIStore = UIState & UIActions
@@ -20,6 +23,7 @@ export const useUIStore = create<UIStore>((set) => ({
   settingsOpen: false,
   serverFormOpen: false,
   editingServerId: null,
+  sshConfigImportOpen: false,
 
   // Actions
   openSettings: () => set({ settingsOpen: true }),
@@ -34,4 +38,6 @@ export const useUIStore = create<UIStore>((set) => ({
       serverFormOpen: false,
       editingServerId: null,
     }),
+  openSSHConfigImport: () => set({ sshConfigImportOpen: true }),
+  closeSSHConfigImport: () => set({ sshConfigImportOpen: false }),
 }))
