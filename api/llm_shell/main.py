@@ -10,12 +10,15 @@ from fastapi.responses import JSONResponse
 from llm_shell.config import get_settings
 from llm_shell.db.database import close_database, get_database
 from llm_shell.exceptions import AppError
+from llm_shell.services.logging import LoggingMiddleware, setup_logging
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler."""
-    # Startup: connect to database
+    # Startup: initialize logging and connect to database
+    settings = get_settings()
+    setup_logging(debug=settings.debug)
     await get_database()
     yield
     # Shutdown: close database
@@ -48,6 +51,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Logging middleware
+app.add_middleware(LoggingMiddleware)
+
 
 # Health check endpoint
 @app.get("/health")
@@ -57,11 +63,12 @@ async def health_check() -> dict[str, str]:
 
 
 # Include routers
-from llm_shell.api import assistant, groups, keypairs, servers, sessions  # noqa: E402
+from llm_shell.api import assistant, groups, import_config, keypairs, servers, sessions  # noqa: E402
 from llm_shell.api import settings as settings_api
 
 app.include_router(assistant.router, prefix="/api", tags=["assistant"])
 app.include_router(groups.router, prefix="/api", tags=["groups"])
+app.include_router(import_config.router, prefix="/api", tags=["import"])
 app.include_router(keypairs.router, prefix="/api", tags=["keypairs"])
 app.include_router(servers.router, prefix="/api", tags=["servers"])
 app.include_router(settings_api.router, prefix="/api", tags=["settings"])
