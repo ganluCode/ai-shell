@@ -45,18 +45,17 @@ class OutputBuffer:
             count += 1
         return count
 
-    def append(self, data: bytes) -> None:
+    def append(self, data: str) -> None:
         """Append data to the buffer.
 
-        Data is decoded as UTF-8 and split on newlines. ANSI escape codes
-        are stripped from the output. Lines are stored without the trailing
-        newline character.
+        Data is split on newlines. ANSI escape codes are stripped from
+        the output. Lines are stored without the trailing newline character.
 
         Args:
-            data: Raw bytes from terminal output.
+            data: String data from terminal output.
         """
-        # Decode and strip ANSI escape codes
-        text = data.decode("utf-8", errors="replace")
+        # Strip ANSI escape codes
+        text = data
         text = ANSI_ESCAPE_PATTERN.sub("", text)
 
         # Combine with any partial line from previous append

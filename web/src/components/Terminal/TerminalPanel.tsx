@@ -1,6 +1,5 @@
 import { useSessionStore } from '../../stores/sessionStore'
 import { TerminalView } from './TerminalView'
-import { StatusOverlay } from './StatusOverlay'
 import './TerminalPanel.css'
 
 export function TerminalPanel() {
@@ -28,10 +27,6 @@ export function TerminalPanel() {
   return (
     <div className="terminal-panel">
       <TerminalView serverId={session.server_id} />
-      <StatusOverlay
-        connectionState={session.status}
-        onReconnect={() => {}}
-      />
     </div>
   )
 }

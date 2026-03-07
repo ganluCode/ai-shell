@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 from collections import deque
 from typing import TYPE_CHECKING, Any, AsyncGenerator
 
@@ -318,6 +319,66 @@ async def call_claude_api(
             await asyncio.sleep(delay)
 
 
+def _parse_command_from_text(text: str) -> dict[str, Any] | None:
+    """Try to extract a command suggestion from plain text response.
+
+    Fallback for when the model doesn't use tool calls (e.g., proxy limitations).
+
+    Args:
+        text: The AI's text response.
+
+    Returns:
+        A command event dict, or None if no command found.
+    """
+    # Pattern: "Suggested command: <command>" or similar
+    # Also match Chinese patterns like "建议命令："
+    patterns = [
+        r'(?:Suggested command|建议命令|推荐命令)[：:]\s*[`]?(.+?)[`]?\s*\n',
+        r'```(?:bash|shell|sh)?\s*\n(.+?)\n```',
+    ]
+
+    command = None
+    for pattern in patterns:
+        match = re.search(pattern, text, re.DOTALL)
+        if match:
+            command = match.group(1).strip()
+            # For code blocks, take only first line if multi-line
+            if '\n' in command:
+                command = command.split('\n')[0].strip()
+            break
+
+    if not command:
+        return None
+
+    # Extract explanation: take text after the command line, clean it up
+    explanation = ""
+    # Look for explanation patterns
+    expl_patterns = [
+        r'(?:\*\*)?(?:说明|解释|Explanation)[：:]?\*?\*?\s*(.+)',
+        r'(?:这个命令|该命令|此命令)(.+?)(?:\n\n|\Z)',
+    ]
+    for pattern in expl_patterns:
+        match = re.search(pattern, text, re.DOTALL)
+        if match:
+            explanation = match.group(1).strip()
+            # Take first sentence/line
+            explanation = explanation.split('\n')[0].strip()
+            break
+
+    if not explanation:
+        # Fallback: use text after command as explanation
+        parts = text.split('\n', 2)
+        if len(parts) > 1:
+            explanation = parts[1].strip().lstrip('-').strip()
+
+    return {
+        "type": "command",
+        "command": command,
+        "explanation": explanation or command,
+        "risk_level": "low",
+    }
+
+
 async def chat(
     session: dict,
     history: deque,
@@ -376,16 +437,30 @@ async def chat(
         ]
 
         if not tool_use_blocks:
-            # No tool use - yield text response
+            # No tool use - extract text and try fallback command parsing
             text_content = ""
             for block in response.content:
                 if hasattr(block, "text"):
                     text_content += block.text
 
             if text_content:
-                yield {"type": "text", "content": text_content}
-                # Add assistant response to history
-                history.append({"role": "assistant", "content": text_content})
+                # Try to extract command from text (fallback for non-tool responses)
+                cmd_event = _parse_command_from_text(text_content)
+                if cmd_event:
+                    safety_result = check_command_safety(cmd_event["command"])
+                    if safety_result["status"] == "blocked":
+                        yield {
+                            "type": "text",
+                            "content": f"命令 '{cmd_event['command']}' 被安全策略阻止: {safety_result['reason']}",
+                        }
+                    else:
+                        if safety_result["status"] == "high":
+                            cmd_event["risk_level"] = "high"
+                        yield cmd_event
+                    history.append({"role": "assistant", "content": text_content})
+                else:
+                    yield {"type": "text", "content": text_content}
+                    history.append({"role": "assistant", "content": text_content})
 
             break
 

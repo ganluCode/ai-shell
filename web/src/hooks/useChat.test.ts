@@ -53,7 +53,7 @@ describe('useChat', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          session_id: 'session-123',
+          server_id: 'session-123',
           message: '查看磁盘使用情况',
         }),
       })
@@ -119,9 +119,7 @@ describe('useChat', () => {
       }
       const events = [
         'data: {"type":"text","content":"查看磁盘"}\n\n',
-        'data: {"type":"command","suggestion":' +
-          JSON.stringify(suggestion) +
-          '}\n\n',
+        'data: {"type":"command","command":"df -h","explanation":"以可读格式显示磁盘使用情况","risk_level":"low"}\n\n',
         'data: {"type":"done"}\n\n',
       ]
       const mockResponse = {
@@ -153,7 +151,7 @@ describe('useChat', () => {
       ]
       const events = [
         'data: {"type":"text","content":"部署流程："}\n\n',
-        'data: {"type":"commands","suggestions":' +
+        'data: {"type":"commands","commands":' +
           JSON.stringify(suggestions) +
           '}\n\n',
         'data: {"type":"done"}\n\n',

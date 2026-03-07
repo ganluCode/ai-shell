@@ -228,7 +228,7 @@ class TestSSHSessionWriteInput:
 
         await session.write_input("ls -la\n")
 
-        mock_stdin.write.assert_called_once_with(b"ls -la\n")
+        mock_stdin.write.assert_called_once_with("ls -la\n")
 
     @pytest.mark.asyncio
     async def test_write_input_with_bytes(self) -> None:
@@ -251,7 +251,7 @@ class TestSSHSessionWriteInput:
 
         await session.write_input(b"cd /tmp\n")
 
-        mock_stdin.write.assert_called_once_with(b"cd /tmp\n")
+        mock_stdin.write.assert_called_once_with("cd /tmp\n")
 
     @pytest.mark.asyncio
     async def test_write_input_with_special_characters(self) -> None:
@@ -274,7 +274,7 @@ class TestSSHSessionWriteInput:
 
         await session.write_input("\x03")  # Ctrl-C
 
-        mock_stdin.write.assert_called_once_with(b"\x03")
+        mock_stdin.write.assert_called_once_with("\x03")
 
 
 class TestSSHSessionReadOutput:
@@ -288,9 +288,9 @@ class TestSSHSessionReadOutput:
 
         # Create async iterator for stdout
         async def stdout_generator() -> Any:
-            yield b"line 1\n"
-            yield b"line 2\n"
-            yield b"line 3\n"
+            yield "line 1\n"
+            yield "line 2\n"
+            yield "line 3\n"
 
         mock_stdout = stdout_generator()
         mock_process.stdout = mock_stdout
@@ -330,7 +330,7 @@ class TestSSHSessionReadOutput:
         mock_process = MagicMock()
 
         async def stdout_generator() -> Any:
-            yield b"\x1b[32mgreen text\x1b[0m\n"
+            yield "\x1b[32mgreen text\x1b[0m\n"
 
         mock_stdout = stdout_generator()
         mock_process.stdout = mock_stdout

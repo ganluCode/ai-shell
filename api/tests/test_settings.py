@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -62,13 +63,14 @@ class TestSettingsAPI:
         assert data["api_key"] == "sk-***abcd"
         mock_get_secret.assert_called_once_with("api_key")
 
-    @patch("llm_shell.services.settings.get_secret")
     def test_api_key_returns_empty_string_when_keyring_empty(
-        self, mock_get_secret: MagicMock, client: TestClient
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """api_key field returns '' when keyring is empty."""
-        # Set up mock to return None (no API key stored)
-        mock_get_secret.return_value = None
+        import llm_shell.services.settings as settings_mod
+
+        monkeypatch.setattr(settings_mod, "get_secret", lambda key: None)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "")
 
         response = client.get("/api/settings")
 
@@ -76,7 +78,6 @@ class TestSettingsAPI:
         data = response.json()
 
         assert data["api_key"] == ""
-        mock_get_secret.assert_called_once_with("api_key")
 
     @patch("llm_shell.services.settings.get_secret")
     def test_api_key_masks_short_key(
@@ -156,12 +157,14 @@ class TestSettingsAPI:
         # Updated field should have new value
         assert data["model"] == "claude-haiku-3-5-20241022"
 
-    @patch("llm_shell.services.settings.get_secret")
     def test_patch_settings_with_empty_body_returns_unchanged_settings(
-        self, mock_get_secret: MagicMock, client: TestClient
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """PATCH with empty body returns unchanged settings."""
-        mock_get_secret.return_value = None
+        import llm_shell.services.settings as settings_mod
+
+        monkeypatch.setattr(settings_mod, "get_secret", lambda key: None)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "")
 
         response = client.patch("/api/settings", json={})
 

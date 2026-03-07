@@ -153,8 +153,8 @@ export interface CommandSuggestion {
 /** SSE event from AI chat endpoint (discriminated union) */
 export type ChatEvent =
   | { type: 'text'; content: string }
-  | { type: 'command'; suggestion: CommandSuggestion; thinking?: string }
-  | { type: 'commands'; suggestions: CommandSuggestion[]; thinking?: string }
+  | { type: 'command'; command: string; explanation: string; risk_level: string; thinking?: string }
+  | { type: 'commands'; commands: CommandSuggestion[]; thinking?: string }
   | { type: 'error'; error: { code: string; message: string } }
   | { type: 'done' };
 

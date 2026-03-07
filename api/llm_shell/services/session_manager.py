@@ -177,6 +177,20 @@ class SessionManager:
         """
         return self._sessions.get(session_id)
 
+    def get_session_by_server_id(self, server_id: str) -> SSHSession | None:
+        """Get an active session by server ID.
+
+        Args:
+            server_id: ID of the server.
+
+        Returns:
+            The SSHSession if found, None otherwise.
+        """
+        for session in self._sessions.values():
+            if session.server_id == server_id:
+                return session
+        return None
+
     async def close_session(self, session_id: str) -> None:
         """Close and remove a session.
 
@@ -187,3 +201,22 @@ class SessionManager:
         if session:
             await session.close()
             logger.info(f"Closed SSH session {session_id}")
+
+
+# Shared singleton instances keyed by database path
+_shared_instances: dict[str, SessionManager] = {}
+
+
+def get_shared_session_manager(db: Database) -> SessionManager:
+    """Get or create a shared SessionManager singleton per database path.
+
+    Args:
+        db: Database instance.
+
+    Returns:
+        SessionManager instance.
+    """
+    db_path = str(db._db_path) if hasattr(db, "_db_path") else "default"
+    if db_path not in _shared_instances:
+        _shared_instances[db_path] = SessionManager(db)
+    return _shared_instances[db_path]

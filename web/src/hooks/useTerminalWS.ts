@@ -56,69 +56,87 @@ export function useTerminalWS({
   onErrorRef.current = onError
 
   useEffect(() => {
-    const wsUrl = `ws://localhost:8765/api/sessions/${serverId}/terminal`
+    let cancelled = false
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//${window.location.host}/api/sessions/${serverId}/terminal`
     setConnectionState('connecting')
 
-    const ws = new WebSocket(wsUrl)
-    wsRef.current = ws
+    // Delay WebSocket creation to survive React StrictMode's
+    // immediate mount → cleanup → mount cycle in development.
+    // The first mount's cleanup calls clearTimeout before the
+    // WebSocket is ever created, so only the second mount connects.
+    const timer = setTimeout(() => {
+      if (cancelled) return
 
-    ws.onopen = () => {
-      setConnectionState('connected')
-    }
+      const ws = new WebSocket(wsUrl)
+      wsRef.current = ws
 
-    ws.onmessage = (event: MessageEvent) => {
-      try {
-        const msg: WsMessage = JSON.parse(event.data)
-
-        switch (msg.type) {
-          case 'output':
-            if (msg.data !== undefined) {
-              onOutputRef.current?.(msg.data)
-            }
-            break
-
-          case 'status':
-            switch (msg.status) {
-              case 'connected':
-              case 'reconnected':
-                setConnectionState('connected')
-                break
-              case 'disconnected':
-                setConnectionState('disconnected')
-                if (msg.retry !== undefined) setRetryCount(msg.retry)
-                if (msg.max_retry !== undefined) setMaxRetry(msg.max_retry)
-                break
-              case 'connection_lost':
-                setConnectionState('connection_lost')
-                break
-            }
-            break
-
-          case 'error':
-            onErrorRef.current?.({
-              code: msg.code || 'UNKNOWN',
-              message: msg.message || 'Unknown error',
-            })
-            break
-        }
-      } catch {
-        // Ignore parse errors
+      ws.onopen = () => {
+        if (cancelled) return
+        setConnectionState('connected')
       }
-    }
 
-    ws.onclose = () => {
-      setConnectionState((prev) =>
-        prev === 'connection_lost' ? 'connection_lost' : 'disconnected'
-      )
-    }
+      ws.onmessage = (event: MessageEvent) => {
+        if (cancelled) return
+        try {
+          const msg: WsMessage = JSON.parse(event.data)
 
-    ws.onerror = () => {
-      setConnectionState('connection_lost')
-    }
+          switch (msg.type) {
+            case 'output':
+              if (msg.data !== undefined) {
+                onOutputRef.current?.(msg.data)
+              }
+              break
+
+            case 'status':
+              switch (msg.status) {
+                case 'connected':
+                case 'reconnected':
+                  setConnectionState('connected')
+                  break
+                case 'disconnected':
+                  setConnectionState('disconnected')
+                  if (msg.retry !== undefined) setRetryCount(msg.retry)
+                  if (msg.max_retry !== undefined) setMaxRetry(msg.max_retry)
+                  break
+                case 'connection_lost':
+                  setConnectionState('connection_lost')
+                  break
+              }
+              break
+
+            case 'error':
+              onErrorRef.current?.({
+                code: msg.code || 'UNKNOWN',
+                message: msg.message || 'Unknown error',
+              })
+              break
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
+      ws.onclose = () => {
+        if (cancelled) return
+        setConnectionState((prev) =>
+          prev === 'connection_lost' ? 'connection_lost' : 'disconnected'
+        )
+      }
+
+      ws.onerror = () => {
+        if (cancelled) return
+        setConnectionState('connection_lost')
+      }
+    }, 0)
 
     return () => {
-      ws.close()
-      wsRef.current = null
+      cancelled = true
+      clearTimeout(timer)
+      if (wsRef.current) {
+        wsRef.current.close()
+        wsRef.current = null
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverId, reconnectKeyRef.current])

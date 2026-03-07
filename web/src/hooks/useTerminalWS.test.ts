@@ -39,19 +39,31 @@ describe('useTerminalWS', () => {
   MockWebSocket.CLOSED = 3
 
   beforeEach(() => {
+    vi.useFakeTimers()
     vi.stubGlobal('WebSocket', MockWebSocket)
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
     vi.clearAllMocks()
   })
 
+  /** Render the hook and flush the setTimeout(0) that creates the WebSocket. */
+  function renderAndConnect(options: Parameters<typeof useTerminalWS>[0]) {
+    const result = renderHook(() => useTerminalWS(options))
+    // Flush the deferred WebSocket creation
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
+    return result
+  }
+
   it('establishes WebSocket connection to correct URL', () => {
-    renderHook(() => useTerminalWS({ serverId: 'server-1' }))
+    renderAndConnect({ serverId: 'server-1' })
 
     expect(MockWebSocket).toHaveBeenCalledWith(
-      'ws://localhost:8765/api/sessions/server-1/terminal'
+      `ws://${window.location.host}/api/sessions/server-1/terminal`
     )
   })
 
@@ -62,9 +74,8 @@ describe('useTerminalWS', () => {
   })
 
   it('updates to connected state when WebSocket opens', () => {
-    const { result } = renderHook(() => useTerminalWS({ serverId: 'server-1' }))
+    const { result } = renderAndConnect({ serverId: 'server-1' })
 
-    // Verify onopen handler was set
     expect(mockWs.onopen).not.toBeNull()
 
     act(() => {
@@ -76,7 +87,7 @@ describe('useTerminalWS', () => {
   })
 
   it('updates to connected when receiving status:connected message', () => {
-    const { result } = renderHook(() => useTerminalWS({ serverId: 'server-1' }))
+    const { result } = renderAndConnect({ serverId: 'server-1' })
 
     act(() => {
       mockWs.readyState = WebSocket.OPEN
@@ -93,7 +104,7 @@ describe('useTerminalWS', () => {
   })
 
   it('updates to disconnected when receiving status:disconnected message', () => {
-    const { result } = renderHook(() => useTerminalWS({ serverId: 'server-1' }))
+    const { result } = renderAndConnect({ serverId: 'server-1' })
 
     act(() => {
       mockWs.readyState = WebSocket.OPEN
@@ -117,7 +128,7 @@ describe('useTerminalWS', () => {
   })
 
   it('updates to connection_lost when receiving status:connection_lost message', () => {
-    const { result } = renderHook(() => useTerminalWS({ serverId: 'server-1' }))
+    const { result } = renderAndConnect({ serverId: 'server-1' })
 
     act(() => {
       mockWs.readyState = WebSocket.OPEN
@@ -138,9 +149,7 @@ describe('useTerminalWS', () => {
 
   it('calls onOutput callback when receiving output message', () => {
     const onOutput = vi.fn()
-    renderHook(() =>
-      useTerminalWS({ serverId: 'server-1', onOutput })
-    )
+    renderAndConnect({ serverId: 'server-1', onOutput })
 
     act(() => {
       mockWs.readyState = WebSocket.OPEN
@@ -161,9 +170,7 @@ describe('useTerminalWS', () => {
 
   it('calls onError callback when receiving error message', () => {
     const onError = vi.fn()
-    renderHook(() =>
-      useTerminalWS({ serverId: 'server-1', onError })
-    )
+    renderAndConnect({ serverId: 'server-1', onError })
 
     act(() => {
       mockWs.readyState = WebSocket.OPEN
@@ -187,7 +194,7 @@ describe('useTerminalWS', () => {
   })
 
   it('sendInput sends correct format via WebSocket', () => {
-    const { result } = renderHook(() => useTerminalWS({ serverId: 'server-1' }))
+    const { result } = renderAndConnect({ serverId: 'server-1' })
 
     act(() => {
       mockWs.readyState = WebSocket.OPEN
@@ -204,7 +211,7 @@ describe('useTerminalWS', () => {
   })
 
   it('sendResize sends correct format via WebSocket', () => {
-    const { result } = renderHook(() => useTerminalWS({ serverId: 'server-1' }))
+    const { result } = renderAndConnect({ serverId: 'server-1' })
 
     act(() => {
       mockWs.readyState = WebSocket.OPEN
@@ -221,7 +228,7 @@ describe('useTerminalWS', () => {
   })
 
   it('closes WebSocket on unmount', () => {
-    const { unmount } = renderHook(() => useTerminalWS({ serverId: 'server-1' }))
+    const { unmount } = renderAndConnect({ serverId: 'server-1' })
 
     unmount()
 
@@ -229,7 +236,7 @@ describe('useTerminalWS', () => {
   })
 
   it('reconnect creates new WebSocket when reconnect() is called', () => {
-    const { result } = renderHook(() => useTerminalWS({ serverId: 'server-1' }))
+    const { result } = renderAndConnect({ serverId: 'server-1' })
 
     act(() => {
       mockWs.readyState = WebSocket.OPEN
@@ -251,11 +258,16 @@ describe('useTerminalWS', () => {
       result.current.reconnect()
     })
 
+    // Flush the deferred WebSocket creation for the reconnect
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
+
     expect((MockWebSocket as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBe(initialCallCount + 1)
   })
 
   it('does not send when WebSocket is not open', () => {
-    const { result } = renderHook(() => useTerminalWS({ serverId: 'server-1' }))
+    const { result } = renderAndConnect({ serverId: 'server-1' })
 
     // Don't simulate open - keep WebSocket in CONNECTING state
 
@@ -264,5 +276,20 @@ describe('useTerminalWS', () => {
     })
 
     expect(mockWs.send).not.toHaveBeenCalled()
+  })
+
+  it('does not create WebSocket if cleanup runs before timeout', () => {
+    // Simulate StrictMode: mount → immediate unmount before setTimeout fires
+    const { unmount } = renderHook(() => useTerminalWS({ serverId: 'server-1' }))
+
+    // Unmount before flushing timers
+    unmount()
+
+    // Now flush - the cancelled flag should prevent WebSocket creation
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
+
+    expect(MockWebSocket).not.toHaveBeenCalled()
   })
 })

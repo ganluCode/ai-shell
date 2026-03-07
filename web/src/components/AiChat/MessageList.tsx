@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
-import type { ChatMessage } from '../../types'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import type { ChatMessage, CommandStatus } from '../../types'
+import { useTerminalStore } from '../../stores/terminalStore'
 import CommandCard from './CommandCard'
 import './MessageList.css'
 
@@ -11,6 +12,22 @@ function MessageList({ messages }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMessagesLengthRef = useRef(0)
   const prevContentRef = useRef<string>('')
+  const sendInput = useTerminalStore((s) => s.sendInput)
+  const [commandStatuses, setCommandStatuses] = useState<Record<string, CommandStatus>>({})
+
+  const handleExecute = useCallback((key: string, command: string) => {
+    if (!sendInput) return
+    setCommandStatuses((prev) => ({ ...prev, [key]: 'running' }))
+    sendInput(command + '\r')
+    // Mark as done after a short delay (no output tracking yet)
+    setTimeout(() => {
+      setCommandStatuses((prev) => ({ ...prev, [key]: 'done' }))
+    }, 500)
+  }, [sendInput])
+
+  const handleSkip = useCallback((key: string) => {
+    setCommandStatuses((prev) => ({ ...prev, [key]: 'skipped' }))
+  }, [])
 
   // Auto-scroll to bottom when new content arrives
   useEffect(() => {
@@ -63,12 +80,18 @@ function MessageList({ messages }: MessageListProps) {
             {/* Render command suggestions if present */}
             {message.suggestions && message.suggestions.length > 0 && (
               <div className="message-suggestions">
-                {message.suggestions.map((suggestion, sIndex) => (
-                  <CommandCard
-                    key={sIndex}
-                    suggestion={suggestion}
-                  />
-                ))}
+                {message.suggestions.map((suggestion, sIndex) => {
+                  const cmdKey = `${index}-${sIndex}`
+                  return (
+                    <CommandCard
+                      key={sIndex}
+                      suggestion={suggestion}
+                      status={commandStatuses[cmdKey]}
+                      onExecute={() => handleExecute(cmdKey, suggestion.command)}
+                      onSkip={() => handleSkip(cmdKey)}
+                    />
+                  )
+                })}
               </div>
             )}
           </div>

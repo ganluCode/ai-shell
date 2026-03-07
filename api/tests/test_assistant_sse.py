@@ -27,7 +27,7 @@ def mock_session_manager() -> MagicMock:
         "username": "testuser",
     }
     mock_session.output_buffer = ["line1", "line2"]
-    manager.get_session.return_value = mock_session
+    manager.get_session_by_server_id.return_value = mock_session
     return manager
 
 
@@ -74,7 +74,7 @@ class TestSSEEndpoint:
                 client = TestClient(app)
                 response = client.post(
                     "/api/assistant/chat",
-                    json={"session_id": "test-session-id", "message": "Hello"},
+                    json={"server_id": "test-session-id", "message": "Hello"},
                 )
 
                 assert response.status_code == 200
@@ -114,7 +114,7 @@ class TestSSEEndpoint:
                 client = TestClient(app)
                 response = client.post(
                     "/api/assistant/chat",
-                    json={"session_id": "test-session-id", "message": "Hello"},
+                    json={"server_id": "test-session-id", "message": "Hello"},
                 )
 
                 content = response.text
@@ -158,7 +158,7 @@ class TestSSEEndpoint:
                 client = TestClient(app)
                 response = client.post(
                     "/api/assistant/chat",
-                    json={"session_id": "test-session-id", "message": "Hello"},
+                    json={"server_id": "test-session-id", "message": "Hello"},
                 )
 
                 content = response.text
@@ -198,7 +198,7 @@ class TestSSEEndpoint:
                 client = TestClient(app)
                 response = client.post(
                     "/api/assistant/chat",
-                    json={"session_id": "test-session-id", "message": "Hello"},
+                    json={"server_id": "test-session-id", "message": "Hello"},
                 )
 
                 content = response.text
@@ -223,7 +223,7 @@ class TestSSEEndpoint:
         """Sends error event when session not found (SSE returns 200 with error event)."""
         # Session manager returns None for session
         mock_manager = MagicMock()
-        mock_manager.get_session.return_value = None
+        mock_manager.get_session_by_server_id.return_value = None
 
         # Override dependencies
         app.dependency_overrides[assistant.get_session_manager] = lambda: mock_manager
@@ -233,7 +233,7 @@ class TestSSEEndpoint:
             client = TestClient(app)
             response = client.post(
                 "/api/assistant/chat",
-                json={"session_id": "nonexistent", "message": "Hello"},
+                json={"server_id": "nonexistent", "message": "Hello"},
             )
 
             # SSE returns 200 with error event in stream
@@ -244,7 +244,7 @@ class TestSSEEndpoint:
             # First event should be error
             data = json.loads(lines[0][6:])
             assert data["type"] == "error"
-            assert data["code"] == "SESSION_NOT_FOUND"
+            assert data["error"]["code"] == "SESSION_NOT_FOUND"
 
             # Last event should be done
             last_data = json.loads(lines[-1][6:])

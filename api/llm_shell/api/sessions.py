@@ -10,14 +10,11 @@ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from llm_shell.db.database import Database, get_database
 from llm_shell.exceptions import AppError, SSHError
 from llm_shell.services.reconnection import ReconnectionHandler
-from llm_shell.services.session_manager import SessionManager
+from llm_shell.services.session_manager import SessionManager, get_shared_session_manager
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# Global session manager instance (singleton per database)
-_session_managers: dict[str, SessionManager] = {}
 
 
 def get_session_manager(
@@ -25,19 +22,13 @@ def get_session_manager(
 ) -> SessionManager:
     """Get or create a SessionManager instance.
 
-    Uses a singleton pattern per database path to maintain session state.
-
     Args:
         db: Database instance.
 
     Returns:
         SessionManager instance.
     """
-    # Use database path as key for singleton
-    db_path = str(db._db_path) if hasattr(db, "_db_path") else "default"
-    if db_path not in _session_managers:
-        _session_managers[db_path] = SessionManager(db)
-    return _session_managers[db_path]
+    return get_shared_session_manager(db)
 
 
 class TerminalWebSocketHandler:
@@ -96,16 +87,15 @@ class TerminalWebSocketHandler:
             # Handle incoming messages
             await self._handle_messages()
 
+        except WebSocketDisconnect:
+            logger.info(f"WebSocket disconnected during setup for server {self.server_id}")
         except SSHError as e:
-            await self._send_error(e.code, e.message)
-            await self.websocket.close()
+            await self._safe_send_error(e.code, e.message)
         except AppError as e:
-            await self._send_error(e.code, e.message)
-            await self.websocket.close()
+            await self._safe_send_error(e.code, e.message)
         except Exception as e:
             logger.exception(f"Unexpected error in terminal WebSocket: {e}")
-            await self._send_error("INTERNAL_ERROR", "An unexpected error occurred")
-            await self.websocket.close()
+            await self._safe_send_error("INTERNAL_ERROR", "An unexpected error occurred")
         finally:
             await self._cleanup()
 
@@ -131,6 +121,14 @@ class TerminalWebSocketHandler:
             {"type": "error", "code": code, "message": message}
         )
 
+    async def _safe_send_error(self, code: str, message: str) -> None:
+        """Send an error message, ignoring failures if WebSocket is already closed."""
+        try:
+            await self._send_error(code, message)
+            await self.websocket.close()
+        except Exception:
+            pass
+
     async def _forward_output(self) -> None:
         """Forward PTY output to WebSocket.
 
@@ -142,12 +140,16 @@ class TerminalWebSocketHandler:
             return
 
         try:
-            async for data in self.session.process.stdout:
-                if data:
-                    # Send raw output with ANSI codes (xterm.js handles them)
-                    await self.websocket.send_json(
-                        {"type": "output", "data": data.decode("utf-8", errors="replace")}
-                    )
+            while not self.session.process.stdout.at_eof():
+                data = await self.session.process.stdout.read(65536)
+                if not data:
+                    break
+                # Send raw output with ANSI codes (xterm.js handles them)
+                await self.websocket.send_json(
+                    {"type": "output", "data": data}
+                )
+                # Store in output buffer for AI context
+                self.session.output_buffer.append(data)
 
             # If we reach here, the stream ended (EOF) - connection likely lost
             logger.warning(f"SSH stdout EOF detected for server {self.server_id}")

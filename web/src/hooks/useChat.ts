@@ -97,7 +97,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   onErrorRef.current = onError
 
   const sendMessage = useCallback(
-    async (sessionId: string, message: string) => {
+    async (serverId: string, message: string) => {
       // Add user message
       const userMessage: ChatMessage = {
         role: 'user',
@@ -123,7 +123,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            session_id: sessionId,
+            server_id: serverId,
             message,
           }),
         })
@@ -185,21 +185,36 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
                   }
                   break
 
-                case 'command':
-                  // Add single command suggestion
+                case 'command': {
+                  // Backend sends {type:"command", command, explanation, risk_level}
+                  const evt = event as Record<string, unknown>
+                  const suggestion = {
+                    command: evt.command as string,
+                    explanation: evt.explanation as string,
+                    risk_level: evt.risk_level as string,
+                  }
                   newMessages[newMessages.length - 1] = {
                     ...lastMessage,
-                    suggestions: [...(lastMessage.suggestions || []), event.suggestion],
+                    suggestions: [...(lastMessage.suggestions || []), suggestion],
                   }
                   break
+                }
 
-                case 'commands':
-                  // Add multiple command suggestions
+                case 'commands': {
+                  // Backend sends {type:"commands", commands: [{command, explanation, risk_level}, ...]}
+                  const cmdsEvt = event as Record<string, unknown>
+                  const commands = cmdsEvt.commands as Array<Record<string, string>>
+                  const suggestions = commands.map((cmd) => ({
+                    command: cmd.command,
+                    explanation: cmd.explanation,
+                    risk_level: cmd.risk_level,
+                  }))
                   newMessages[newMessages.length - 1] = {
                     ...lastMessage,
-                    suggestions: [...(lastMessage.suggestions || []), ...event.suggestions],
+                    suggestions: [...(lastMessage.suggestions || []), ...suggestions],
                   }
                   break
+                }
 
                 case 'error':
                   // Trigger error callback

@@ -10,17 +10,13 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from llm_shell.db.database import Database, get_database
-from llm_shell.exceptions import NotFoundError
 from llm_shell.services.ai import chat, create_history_deque
-from llm_shell.services.session_manager import SessionManager
+from llm_shell.services.session_manager import SessionManager, get_shared_session_manager
 from llm_shell.services.settings import SettingsService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# Global session manager instance (singleton per database)
-_session_managers: dict[str, SessionManager] = {}
 
 
 def get_session_manager(
@@ -34,10 +30,7 @@ def get_session_manager(
     Returns:
         SessionManager instance.
     """
-    db_path = str(db._db_path) if hasattr(db, "_db_path") else "default"
-    if db_path not in _session_managers:
-        _session_managers[db_path] = SessionManager(db)
-    return _session_managers[db_path]
+    return get_shared_session_manager(db)
 
 
 def get_settings_service(
@@ -91,7 +84,7 @@ class ChatRequest:
 
 
 async def generate_sse_events(
-    session_id: str,
+    server_id: str,
     message: str,
     session_manager: SessionManager,
     settings_service: SettingsService,
@@ -99,7 +92,7 @@ async def generate_sse_events(
     """Generate SSE events from chat.
 
     Args:
-        session_id: ID of the SSH session.
+        server_id: ID of the server (used to find the active SSH session).
         message: User's message.
         session_manager: Session manager to get the session.
         settings_service: Settings service for configuration.
@@ -108,13 +101,15 @@ async def generate_sse_events(
         SSE formatted strings ('data: {json}\\n\\n').
     """
     try:
-        # Get the session
-        session = session_manager.get_session(session_id)
+        # Get the session by server_id
+        session = session_manager.get_session_by_server_id(server_id)
         if session is None:
             error_event = json.dumps({
                 "type": "error",
-                "code": "SESSION_NOT_FOUND",
-                "message": f"Session '{session_id}' not found",
+                "error": {
+                    "code": "SESSION_NOT_FOUND",
+                    "message": f"No active session for server '{server_id}'",
+                },
             })
             yield f"data: {error_event}\n\n"
             yield 'data: {"type":"done"}\n\n'
@@ -123,11 +118,15 @@ async def generate_sse_events(
         # Build session dict for chat
         session_dict: dict[str, Any] = {
             "server_info": session.server_info or {},
-            "output_buffer": list(session.output_buffer) if session.output_buffer else [],
+            "output_buffer": (
+                session.output_buffer.get_recent(session.output_buffer.total_lines)
+                if hasattr(session.output_buffer, "get_recent")
+                else list(session.output_buffer)
+            ) if session.output_buffer else [],
         }
 
-        # Get or create conversation history
-        history = get_or_create_history(session_id)
+        # Get or create conversation history (keyed by server_id for consistency)
+        history = get_or_create_history(server_id)
 
         # Stream chat events
         async for event in chat(session_dict, history, message, settings_service):
@@ -141,8 +140,10 @@ async def generate_sse_events(
         logger.exception(f"Error in chat stream: {e}")
         error_event = json.dumps({
             "type": "error",
-            "code": "INTERNAL_ERROR",
-            "message": str(e),
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": str(e),
+            },
         })
         yield f"data: {error_event}\n\n"
         yield 'data: {"type":"done"}\n\n'
@@ -173,10 +174,10 @@ async def assistant_chat(
     Returns:
         StreamingResponse with text/event-stream content type.
     """
-    session_id = request.get("session_id", "")
+    server_id = request.get("server_id", "")
     message = request.get("message", "")
 
     return StreamingResponse(
-        generate_sse_events(session_id, message, session_manager, settings_service),
+        generate_sse_events(server_id, message, session_manager, settings_service),
         media_type="text/event-stream",
     )

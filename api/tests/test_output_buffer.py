@@ -22,7 +22,7 @@ class TestOutputBufferCapacity:
 
         # Add 10 lines
         for i in range(10):
-            buffer.append(f"line {i}\n".encode())
+            buffer.append(f"line {i}\n")
 
         # Should only keep last 5
         assert buffer.total_lines == 5
@@ -32,7 +32,7 @@ class TestOutputBufferCapacity:
         """total_lines should be accurate after buffer overflow."""
         buffer = OutputBuffer(capacity=3)
         for i in range(10):
-            buffer.append(f"line {i}\n".encode())
+            buffer.append(f"line {i}\n")
 
         assert buffer.total_lines == 3
 
@@ -44,7 +44,7 @@ class TestOutputBufferANSIStripping:
         """ANSI color codes should be stripped."""
         buffer = OutputBuffer()
         # Green text: \x1b[32mHello\x1b[0m
-        buffer.append(b"\x1b[32mHello\x1b[0m\n")
+        buffer.append("\x1b[32mHello\x1b[0m\n")
 
         assert buffer.get_all() == ["Hello"]
 
@@ -52,7 +52,7 @@ class TestOutputBufferANSIStripping:
         """ANSI cursor movement codes should be stripped."""
         buffer = OutputBuffer()
         # Move cursor up: \x1b[1A
-        buffer.append(b"Line1\x1b[1ALine1\n")
+        buffer.append("Line1\x1b[1ALine1\n")
 
         assert buffer.get_all() == ["Line1Line1"]
 
@@ -60,7 +60,7 @@ class TestOutputBufferANSIStripping:
         """ANSI clear screen codes should be stripped."""
         buffer = OutputBuffer()
         # Clear screen: \x1b[2J
-        buffer.append(b"\x1b[2JHello\n")
+        buffer.append("\x1b[2JHello\n")
 
         assert buffer.get_all() == ["Hello"]
 
@@ -68,21 +68,21 @@ class TestOutputBufferANSIStripping:
         """Multiple ANSI codes should be stripped."""
         buffer = OutputBuffer()
         # Bold, green, reset
-        buffer.append(b"\x1b[1m\x1b[32mBold Green\x1b[0m\x1b[0m\n")
+        buffer.append("\x1b[1m\x1b[32mBold Green\x1b[0m\x1b[0m\n")
 
         assert buffer.get_all() == ["Bold Green"]
 
     def test_preserve_plain_text(self) -> None:
         """Plain text should be preserved unchanged."""
         buffer = OutputBuffer()
-        buffer.append(b"Hello, World!\n")
+        buffer.append("Hello, World!\n")
 
         assert buffer.get_all() == ["Hello, World!"]
 
     def test_empty_output(self) -> None:
         """Empty input should result in empty buffer."""
         buffer = OutputBuffer()
-        buffer.append(b"")
+        buffer.append("")
 
         assert buffer.total_lines == 0
         assert buffer.get_all() == []
@@ -95,7 +95,7 @@ class TestOutputBufferGetRecent:
         """get_recent(n) should return last n lines."""
         buffer = OutputBuffer()
         for i in range(10):
-            buffer.append(f"line {i}\n".encode())
+            buffer.append(f"line {i}\n")
 
         recent = buffer.get_recent(3)
         assert recent == ["line 7", "line 8", "line 9"]
@@ -104,7 +104,7 @@ class TestOutputBufferGetRecent:
         """get_recent(n) should return all lines if n > total."""
         buffer = OutputBuffer()
         for i in range(3):
-            buffer.append(f"line {i}\n".encode())
+            buffer.append(f"line {i}\n")
 
         recent = buffer.get_recent(10)
         assert recent == ["line 0", "line 1", "line 2"]
@@ -120,7 +120,7 @@ class TestOutputBufferGetRecent:
         """get_recent(0) should return empty list."""
         buffer = OutputBuffer()
         for i in range(5):
-            buffer.append(f"line {i}\n".encode())
+            buffer.append(f"line {i}\n")
 
         recent = buffer.get_recent(0)
         assert recent == []
@@ -133,7 +133,7 @@ class TestOutputBufferGetAll:
         """get_all should return all stored lines."""
         buffer = OutputBuffer()
         for i in range(5):
-            buffer.append(f"line {i}\n".encode())
+            buffer.append(f"line {i}\n")
 
         all_lines = buffer.get_all()
         assert all_lines == ["line 0", "line 1", "line 2", "line 3", "line 4"]
@@ -148,7 +148,7 @@ class TestOutputBufferGetAll:
         """get_all should return only lines within capacity after overflow."""
         buffer = OutputBuffer(capacity=3)
         for i in range(10):
-            buffer.append(f"line {i}\n".encode())
+            buffer.append(f"line {i}\n")
 
         all_lines = buffer.get_all()
         assert all_lines == ["line 7", "line 8", "line 9"]
@@ -166,7 +166,7 @@ class TestOutputBufferTotalLines:
         """total_lines should reflect number of appended lines."""
         buffer = OutputBuffer()
         for i in range(5):
-            buffer.append(f"line {i}\n".encode())
+            buffer.append(f"line {i}\n")
 
         assert buffer.total_lines == 5
 
@@ -174,7 +174,7 @@ class TestOutputBufferTotalLines:
         """total_lines should be capped at capacity after overflow."""
         buffer = OutputBuffer(capacity=3)
         for i in range(10):
-            buffer.append(f"line {i}\n".encode())
+            buffer.append(f"line {i}\n")
 
         assert buffer.total_lines == 3
 
@@ -185,7 +185,7 @@ class TestOutputBufferMultilineAppend:
     def test_append_multiline_data(self) -> None:
         """append should split data on newlines."""
         buffer = OutputBuffer()
-        buffer.append(b"line 1\nline 2\nline 3\n")
+        buffer.append("line 1\nline 2\nline 3\n")
 
         assert buffer.total_lines == 3
         assert buffer.get_all() == ["line 1", "line 2", "line 3"]
@@ -193,8 +193,8 @@ class TestOutputBufferMultilineAppend:
     def test_append_partial_line_continued(self) -> None:
         """append should handle partial lines continued in next append."""
         buffer = OutputBuffer()
-        buffer.append(b"line 1")  # No newline
-        buffer.append(b" continued\n")
+        buffer.append("line 1")  # No newline
+        buffer.append(" continued\n")
 
         assert buffer.total_lines == 1
         assert buffer.get_all() == ["line 1 continued"]
@@ -202,14 +202,14 @@ class TestOutputBufferMultilineAppend:
     def test_append_multiline_with_ansi(self) -> None:
         """append should strip ANSI codes from multiline data."""
         buffer = OutputBuffer()
-        buffer.append(b"\x1b[32mline 1\x1b[0m\n\x1b[31mline 2\x1b[0m\n")
+        buffer.append("\x1b[32mline 1\x1b[0m\n\x1b[31mline 2\x1b[0m\n")
 
         assert buffer.get_all() == ["line 1", "line 2"]
 
     def test_append_without_trailing_newline(self) -> None:
         """append without trailing newline should still store the line."""
         buffer = OutputBuffer()
-        buffer.append(b"line 1\nline 2")
+        buffer.append("line 1\nline 2")
 
         assert buffer.total_lines == 2
         assert buffer.get_all() == ["line 1", "line 2"]

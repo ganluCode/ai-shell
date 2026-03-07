@@ -76,11 +76,9 @@ class SSHSession:
             data: Input data to write (string or bytes).
         """
         if self.process is not None and self.process.stdin is not None:
-            if isinstance(data, str):
-                data = data.encode()
+            if isinstance(data, bytes):
+                data = data.decode("utf-8", errors="replace")
             self.process.stdin.write(data)
-            if hasattr(self.process.stdin, "drain"):
-                await self.process.stdin.drain()
 
     async def read_output(self) -> None:
         """Read output from the PTY and write to output buffer.
@@ -147,10 +145,8 @@ async def probe_server(conn: Any) -> dict[str, str]:
 
     for key, cmd in commands.items():
         try:
-            result = await conn.exec(cmd)
-            stdout = await result.stdout.read()
-            # Decode and strip trailing whitespace
-            output = stdout.decode("utf-8", errors="replace").strip()
+            result = await conn.run(cmd, check=False)
+            output = result.stdout.strip() if result.stdout else ""
             server_info[key] = output
         except Exception as e:
             logger.warning(f"Failed to probe {key} with command '{cmd}': {e}")

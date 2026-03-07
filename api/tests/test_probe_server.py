@@ -16,18 +16,15 @@ class TestProbeServerCommands:
         """probe_server should execute 'uname -a' command."""
         mock_conn = MagicMock()
 
-        async def mock_exec(cmd: str) -> Any:
-            if cmd == "uname -a":
-                mock_result = MagicMock()
-                mock_result.stdout = MagicMock()
-                mock_result.stdout.read = AsyncMock(return_value=b"Linux hostname 5.4.0 #1 SMP x86_64 GNU/Linux\n")
-                return mock_result
+        async def mock_run(cmd: str, **kwargs: Any) -> Any:
             mock_result = MagicMock()
-            mock_result.stdout = MagicMock()
-            mock_result.stdout.read = AsyncMock(return_value=b"")
+            if cmd == "uname -a":
+                mock_result.stdout = "Linux hostname 5.4.0 #1 SMP x86_64 GNU/Linux\n"
+            else:
+                mock_result.stdout = ""
             return mock_result
 
-        mock_conn.exec = mock_exec
+        mock_conn.run = mock_run
 
         result = await probe_server(mock_conn)
 
@@ -38,18 +35,15 @@ class TestProbeServerCommands:
         """probe_server should execute 'echo $SHELL' command."""
         mock_conn = MagicMock()
 
-        async def mock_exec(cmd: str) -> Any:
-            if cmd == "echo $SHELL":
-                mock_result = MagicMock()
-                mock_result.stdout = MagicMock()
-                mock_result.stdout.read = AsyncMock(return_value=b"/bin/bash\n")
-                return mock_result
+        async def mock_run(cmd: str, **kwargs: Any) -> Any:
             mock_result = MagicMock()
-            mock_result.stdout = MagicMock()
-            mock_result.stdout.read = AsyncMock(return_value=b"")
+            if cmd == "echo $SHELL":
+                mock_result.stdout = "/bin/bash\n"
+            else:
+                mock_result.stdout = ""
             return mock_result
 
-        mock_conn.exec = mock_exec
+        mock_conn.run = mock_run
 
         result = await probe_server(mock_conn)
 
@@ -60,25 +54,22 @@ class TestProbeServerCommands:
         """probe_server should execute 'cat /etc/os-release | head -5' command."""
         mock_conn = MagicMock()
 
-        os_release_output = b"""PRETTY_NAME="Ubuntu 22.04.3 LTS"
+        os_release_output = """PRETTY_NAME="Ubuntu 22.04.3 LTS"
 NAME="Ubuntu"
 VERSION_ID="22.04"
 VERSION="22.04.3 LTS (Jammy Jellyfish)"
 ID=ubuntu
 """
 
-        async def mock_exec(cmd: str) -> Any:
-            if cmd == "cat /etc/os-release | head -5":
-                mock_result = MagicMock()
-                mock_result.stdout = MagicMock()
-                mock_result.stdout.read = AsyncMock(return_value=os_release_output)
-                return mock_result
+        async def mock_run(cmd: str, **kwargs: Any) -> Any:
             mock_result = MagicMock()
-            mock_result.stdout = MagicMock()
-            mock_result.stdout.read = AsyncMock(return_value=b"")
+            if cmd == "cat /etc/os-release | head -5":
+                mock_result.stdout = os_release_output
+            else:
+                mock_result.stdout = ""
             return mock_result
 
-        mock_conn.exec = mock_exec
+        mock_conn.run = mock_run
 
         result = await probe_server(mock_conn)
 
@@ -90,18 +81,15 @@ ID=ubuntu
         """probe_server should execute 'whoami' command."""
         mock_conn = MagicMock()
 
-        async def mock_exec(cmd: str) -> Any:
-            if cmd == "whoami":
-                mock_result = MagicMock()
-                mock_result.stdout = MagicMock()
-                mock_result.stdout.read = AsyncMock(return_value=b"root\n")
-                return mock_result
+        async def mock_run(cmd: str, **kwargs: Any) -> Any:
             mock_result = MagicMock()
-            mock_result.stdout = MagicMock()
-            mock_result.stdout.read = AsyncMock(return_value=b"")
+            if cmd == "whoami":
+                mock_result.stdout = "root\n"
+            else:
+                mock_result.stdout = ""
             return mock_result
 
-        mock_conn.exec = mock_exec
+        mock_conn.run = mock_run
 
         result = await probe_server(mock_conn)
 
@@ -116,13 +104,12 @@ class TestProbeServerResultFormat:
         """probe_server should return a dictionary."""
         mock_conn = MagicMock()
 
-        async def mock_exec(cmd: str) -> Any:
+        async def mock_run(cmd: str, **kwargs: Any) -> Any:
             mock_result = MagicMock()
-            mock_result.stdout = MagicMock()
-            mock_result.stdout.read = AsyncMock(return_value=b"test\n")
+            mock_result.stdout = "test\n"
             return mock_result
 
-        mock_conn.exec = mock_exec
+        mock_conn.run = mock_run
 
         result = await probe_server(mock_conn)
 
@@ -133,13 +120,12 @@ class TestProbeServerResultFormat:
         """probe_server should return all expected fields."""
         mock_conn = MagicMock()
 
-        async def mock_exec(cmd: str) -> Any:
+        async def mock_run(cmd: str, **kwargs: Any) -> Any:
             mock_result = MagicMock()
-            mock_result.stdout = MagicMock()
-            mock_result.stdout.read = AsyncMock(return_value=b"test\n")
+            mock_result.stdout = "test\n"
             return mock_result
 
-        mock_conn.exec = mock_exec
+        mock_conn.run = mock_run
 
         result = await probe_server(mock_conn)
 
@@ -153,13 +139,12 @@ class TestProbeServerResultFormat:
         """probe_server should strip trailing newlines from output."""
         mock_conn = MagicMock()
 
-        async def mock_exec(cmd: str) -> Any:
+        async def mock_run(cmd: str, **kwargs: Any) -> Any:
             mock_result = MagicMock()
-            mock_result.stdout = MagicMock()
-            mock_result.stdout.read = AsyncMock(return_value=b"test_value\n\n")
+            mock_result.stdout = "test_value\n\n"
             return mock_result
 
-        mock_conn.exec = mock_exec
+        mock_conn.run = mock_run
 
         result = await probe_server(mock_conn)
 
@@ -176,13 +161,12 @@ class TestProbeServerEdgeCases:
         """probe_server should handle empty command output gracefully."""
         mock_conn = MagicMock()
 
-        async def mock_exec(cmd: str) -> Any:
+        async def mock_run(cmd: str, **kwargs: Any) -> Any:
             mock_result = MagicMock()
-            mock_result.stdout = MagicMock()
-            mock_result.stdout.read = AsyncMock(return_value=b"")
+            mock_result.stdout = ""
             return mock_result
 
-        mock_conn.exec = mock_exec
+        mock_conn.run = mock_run
 
         result = await probe_server(mock_conn)
 
@@ -197,13 +181,12 @@ class TestProbeServerEdgeCases:
         """probe_server should handle missing /etc/os-release gracefully."""
         mock_conn = MagicMock()
 
-        async def mock_exec(cmd: str) -> Any:
+        async def mock_run(cmd: str, **kwargs: Any) -> Any:
             mock_result = MagicMock()
-            mock_result.stdout = MagicMock()
-            mock_result.stdout.read = AsyncMock(return_value=b"")
+            mock_result.stdout = ""
             return mock_result
 
-        mock_conn.exec = mock_exec
+        mock_conn.run = mock_run
 
         result = await probe_server(mock_conn)
 
@@ -222,13 +205,12 @@ class TestProbeServerIntegration:
 
         mock_conn = MagicMock()
 
-        async def mock_exec(cmd: str) -> Any:
+        async def mock_run(cmd: str, **kwargs: Any) -> Any:
             mock_result = MagicMock()
-            mock_result.stdout = MagicMock()
-            mock_result.stdout.read = AsyncMock(return_value=b"test\n")
+            mock_result.stdout = "test\n"
             return mock_result
 
-        mock_conn.exec = mock_exec
+        mock_conn.run = mock_run
 
         server_info = await probe_server(mock_conn)
 

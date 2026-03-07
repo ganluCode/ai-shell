@@ -3,6 +3,8 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { useTerminalWS } from '../../hooks/useTerminalWS'
 import { useSettings } from '../../hooks/useSettings'
+import { useTerminalStore } from '../../stores/terminalStore'
+import { StatusOverlay } from './StatusOverlay'
 import '@xterm/xterm/css/xterm.css'
 
 export interface TerminalViewProps {
@@ -43,12 +45,19 @@ export function TerminalView({ serverId }: TerminalViewProps) {
   const { data: settings } = useSettings()
 
   // WebSocket connection
-  const { sendInput, sendResize } = useTerminalWS({
+  const { connectionState, sendInput, sendResize, reconnect, retryCount, maxRetry } = useTerminalWS({
     serverId,
     onOutput: useCallback((data: string) => {
       terminalRef.current?.write(data)
     }, []),
   })
+
+  // Share sendInput with other components (e.g., AiChat command execution)
+  const setSendInput = useTerminalStore((s) => s.setSendInput)
+  useEffect(() => {
+    setSendInput(sendInput)
+    return () => setSendInput(null)
+  }, [sendInput, setSendInput])
 
   // Initialize terminal
   useEffect(() => {
@@ -121,13 +130,21 @@ export function TerminalView({ serverId }: TerminalViewProps) {
   }, [settings])
 
   return (
-    <div
-      ref={containerRef}
-      className="terminal-container"
-      role="region"
-      aria-label="Terminal"
-      style={{ width: '100%', height: '100%' }}
-    />
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <div
+        ref={containerRef}
+        className="terminal-container"
+        role="region"
+        aria-label="Terminal"
+        style={{ width: '100%', height: '100%' }}
+      />
+      <StatusOverlay
+        connectionState={connectionState}
+        retryCount={retryCount}
+        maxRetry={maxRetry}
+        onReconnect={reconnect}
+      />
+    </div>
   )
 }
 
