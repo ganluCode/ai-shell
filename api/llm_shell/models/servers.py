@@ -34,7 +34,7 @@ class ServerCreate(ServerBase):
         """Validate that auth credentials match auth_type."""
         if self.auth_type == AuthType.KEY and not self.key_id:
             raise ValueError("key_id is required when auth_type is 'key'")
-        if self.auth_type == AuthType.PASSWORD and not self.password:
+        if self.auth_type == AuthType.PASSWORD and self.password is None:
             raise ValueError("password is required when auth_type is 'password'")
         return self
 

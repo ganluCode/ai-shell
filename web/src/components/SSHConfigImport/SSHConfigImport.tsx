@@ -51,8 +51,8 @@ function SSHConfigImport() {
   // Handle successful import
   useEffect(() => {
     if (importMutation.isSuccess && importMutation.data && !importSucceeded) {
-      const { imported } = importMutation.data
-      addToast('success', `成功导入 ${imported} 台服务器`)
+      const { imported_count } = importMutation.data
+      addToast('success', `成功导入 ${imported_count} 台服务器`)
       setImportSucceeded(true)
       // Close modal after successful import
       closeSSHConfigImport()

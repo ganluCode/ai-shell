@@ -196,12 +196,12 @@ export interface SSHConfigEntry {
 
 /** Input for importing selected SSH config entries */
 export interface SSHConfigImportInput {
-  selected: string[];
+  labels: string[];
 }
 
 /** Result of SSH config import operation */
 export interface SSHConfigImportResult {
-  imported: number;
+  imported_count: number;
   servers: Server[];
 }
 

@@ -1,7 +1,7 @@
 """Tests for SSH Config Import API."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -25,8 +25,8 @@ def mock_servers_service(client: TestClient) -> MagicMock:
     from llm_shell.api.servers import get_servers_service
 
     service = MagicMock(spec=ServersService)
-    service.list_all = MagicMock(return_value=[])
-    service.create = MagicMock()
+    service.list_all = AsyncMock(return_value=[])
+    service.create = AsyncMock()
     app.dependency_overrides[get_servers_service] = lambda: service
     yield service
     app.dependency_overrides.pop(get_servers_service, None)
@@ -38,8 +38,8 @@ def mock_keypairs_service(client: TestClient) -> MagicMock:
     from llm_shell.api.import_config import get_keypairs_service
 
     service = MagicMock(spec=KeyPairsService)
-    service.list_all = MagicMock(return_value=[])
-    service.create = MagicMock()
+    service.list_all = AsyncMock(return_value=[])
+    service.create = AsyncMock()
     app.dependency_overrides[get_keypairs_service] = lambda: service
     yield service
     app.dependency_overrides.pop(get_keypairs_service, None)
@@ -223,6 +223,7 @@ class TestSSHConfigImport:
     ) -> None:
         """Test entries with already_exists=true are skipped during import."""
         from llm_shell.models.common import AuthType
+        from llm_shell.models.keypairs import KeyPairOut
         from llm_shell.models.servers import ServerOut
 
         # Create a mock existing server
@@ -257,6 +258,22 @@ class TestSSHConfigImport:
                 identity_file="/home/user/.ssh/new_key",
             ),
         ]
+
+        # Mock keypair creation for new-server's identity file
+        mock_keypairs_service.create.return_value = KeyPairOut(
+            id="new-keypair-id",
+            label="new-server",
+            private_key_path="/home/user/.ssh/new_key",
+            created_at="2024-01-01T00:00:00",
+            updated_at="2024-01-01T00:00:00",
+        )
+
+        # Mock server creation
+        mock_servers_service.create.return_value = MagicMock(
+            id="new-server-id",
+            label="new-server",
+            host="10.0.0.5",
+        )
 
         response = client.post(
             "/api/import/ssh-config",
@@ -309,7 +326,15 @@ class TestSSHConfigImport:
         mock_keypairs_service.create.return_value = mock_keypair
         mock_keypairs_service.list_all.return_value = []
 
-        mock_servers_service.create.return_value = MagicMock(id="server-id")
+        call_count = [0]
+        def make_server(*args, **kwargs):
+            call_count[0] += 1
+            return MagicMock(
+                id=f"server-id-{call_count[0]}",
+                label=f"server-{call_count[0]}",
+                host=f"192.168.1.{99 + call_count[0]}",
+            )
+        mock_servers_service.create.side_effect = make_server
 
         response = client.post(
             "/api/import/ssh-config",
@@ -341,7 +366,11 @@ class TestSSHConfigImport:
             ),
         ]
         mock_servers_service.list_all.return_value = []
-        mock_servers_service.create.return_value = MagicMock(id="server-id")
+        mock_servers_service.create.return_value = MagicMock(
+            id="server-id",
+            label="password-server",
+            host="192.168.1.100",
+        )
 
         response = client.post(
             "/api/import/ssh-config",

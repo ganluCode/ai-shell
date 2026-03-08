@@ -440,7 +440,7 @@ describe('SSHConfigImport', () => {
       mockStoreState.sshConfigImportOpen = true
       mockHookState.previewData = { entries: [mockEntry1] }
       mockMutationState.isSuccess = true
-      mockMutationState.data = { imported: 1, servers: [mockServer] }
+      mockMutationState.data = { imported_count: 1, servers: [mockServer] }
 
       render(<SSHConfigImport />, { wrapper: createWrapper() })
 
@@ -454,7 +454,7 @@ describe('SSHConfigImport', () => {
       mockStoreState.sshConfigImportOpen = true
       mockHookState.previewData = { entries: [mockEntry1] }
       mockMutationState.isSuccess = true
-      mockMutationState.data = { imported: 1, servers: [mockServer] }
+      mockMutationState.data = { imported_count: 1, servers: [mockServer] }
 
       render(<SSHConfigImport />, { wrapper: createWrapper() })
 

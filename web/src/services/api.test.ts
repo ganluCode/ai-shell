@@ -689,7 +689,7 @@ describe('api', () => {
       it('makes POST request to /api/import/ssh-config with selected entries', async () => {
         const selected = ['prod-web-01', 'staging-app']
         const mockResult: SSHConfigImportResult = {
-          imported: 2,
+          imported_count: 2,
           servers: [mockServer],
         }
         vi.mocked(fetch).mockResolvedValueOnce({
@@ -703,14 +703,14 @@ describe('api', () => {
         expect(result).toEqual(mockResult)
         expect(fetch).toHaveBeenCalledWith('/api/import/ssh-config', expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ selected }),
+          body: JSON.stringify({ labels: selected }),
         }))
       })
 
       it('returns typed response with imported count and servers', async () => {
         const selected = ['prod-web-01']
         const mockResult: SSHConfigImportResult = {
-          imported: 1,
+          imported_count: 1,
           servers: [mockServer],
         }
         vi.mocked(fetch).mockResolvedValueOnce({
@@ -721,14 +721,14 @@ describe('api', () => {
 
         const result = await importSSHConfig(selected)
 
-        expect(result.imported).toBe(1)
+        expect(result.imported_count).toBe(1)
         expect(result.servers).toHaveLength(1)
         expect(result.servers[0].label).toBe('prod-web-01')
       })
 
       it('handles empty selection', async () => {
         const mockResult: SSHConfigImportResult = {
-          imported: 0,
+          imported_count: 0,
           servers: [],
         }
         vi.mocked(fetch).mockResolvedValueOnce({
@@ -739,11 +739,11 @@ describe('api', () => {
 
         const result = await importSSHConfig([])
 
-        expect(result.imported).toBe(0)
+        expect(result.imported_count).toBe(0)
         expect(result.servers).toHaveLength(0)
         expect(fetch).toHaveBeenCalledWith('/api/import/ssh-config', expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ selected: [] }),
+          body: JSON.stringify({ labels: [] }),
         }))
       })
 

@@ -54,7 +54,10 @@ async def preview_ssh_config(
 
     Compares with existing servers by host+port+username and marks already_exists.
     """
-    entries = parse_ssh_config(config_path)
+    try:
+        entries = parse_ssh_config(config_path)
+    except FileNotFoundError:
+        return SSHConfigPreviewOut(entries=[])
 
     # Get existing servers for comparison
     existing_servers = await servers_service.list_all()
@@ -88,7 +91,10 @@ async def import_ssh_config(
     Deduplicates identity file paths when creating keypairs.
     """
     # Parse config and get existing servers
-    entries = parse_ssh_config(config_path)
+    try:
+        entries = parse_ssh_config(config_path)
+    except FileNotFoundError:
+        return SSHConfigImportOut(imported_count=0, servers=[])
     existing_servers = await servers_service.list_all()
 
     # Create lookup maps
@@ -144,17 +150,18 @@ async def import_ssh_config(
                 identity_to_keypair[entry.identity_file] = key_id
 
         # Create server
-        server = await servers_service.create(
-            ServerCreate(
-                label=entry.label,
-                host=entry.host,
-                port=entry.port,
-                username=entry.username,
-                auth_type=AuthType.KEY if key_id else AuthType.PASSWORD,
-                key_id=key_id,
-                proxy_jump=entry.proxy_jump,
-            )
+        server_kwargs: dict = dict(
+            label=entry.label,
+            host=entry.host,
+            port=entry.port,
+            username=entry.username,
+            auth_type=AuthType.KEY if key_id else AuthType.PASSWORD,
+            key_id=key_id,
+            proxy_jump=entry.proxy_jump,
         )
+        if not key_id:
+            server_kwargs["password"] = ""
+        server = await servers_service.create(ServerCreate(**server_kwargs))
 
         imported_servers.append(
             ImportedServer(

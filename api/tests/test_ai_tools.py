@@ -11,7 +11,7 @@ class TestToolsList:
     def test_tools_is_list(self) -> None:
         """TOOLS should be a list."""
         assert isinstance(TOOLS, list)
-        assert len(TOOLS) == 3
+        assert len(TOOLS) == 5
 
     def test_tools_have_required_fields(self) -> None:
         """Each tool should have name, description, and input_schema."""

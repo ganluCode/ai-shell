@@ -66,6 +66,7 @@ function ServerList({ onServerConnect }: ServerListProps) {
   const deleteServer = useDeleteServer()
   const openSettings = useUIStore((state) => state.openSettings)
   const openServerForm = useUIStore((state) => state.openServerForm)
+  const openSSHConfigImport = useUIStore((state) => state.openSSHConfigImport)
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null)
@@ -137,6 +138,14 @@ function ServerList({ onServerConnect }: ServerListProps) {
           <button
             type="button"
             className="server-list-btn"
+            onClick={openSSHConfigImport}
+            aria-label="Import"
+          >
+            Import
+          </button>
+          <button
+            type="button"
+            className="server-list-btn"
             onClick={openSettings}
             aria-label="Settings"
           >
@@ -170,6 +179,14 @@ function ServerList({ onServerConnect }: ServerListProps) {
           aria-label="New Server"
         >
           + New Server
+        </button>
+        <button
+          type="button"
+          className="server-list-btn"
+          onClick={openSSHConfigImport}
+          aria-label="Import"
+        >
+          Import
         </button>
         <button
           type="button"

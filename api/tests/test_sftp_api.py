@@ -69,7 +69,7 @@ class TestDownloadEndpoint:
         test_file.write_text("test content for download")
 
         # Mock download_file to return our test file path
-        with patch("llm_shell.api.sessions.download_file") as mock_download:
+        with patch("llm_shell.services.sftp.download_file") as mock_download:
             mock_download.return_value = str(test_file)
 
             app.dependency_overrides[get_session_manager] = lambda: mock_session_manager
@@ -100,7 +100,7 @@ class TestDownloadEndpoint:
         test_file = tmp_path / "report.pdf"
         test_file.write_bytes(b"pdf content")
 
-        with patch("llm_shell.api.sessions.download_file") as mock_download:
+        with patch("llm_shell.services.sftp.download_file") as mock_download:
             mock_download.return_value = str(test_file)
 
             app.dependency_overrides[get_session_manager] = lambda: mock_session_manager
@@ -140,7 +140,7 @@ class TestDownloadEndpoint:
 
             assert response.status_code == 404
             data = response.json()
-            assert data["error"]["code"] == "NOT_FOUND"
+            assert data["detail"]["error"]["code"] == "NOT_FOUND"
         finally:
             app.dependency_overrides.clear()
 
@@ -179,7 +179,7 @@ class TestUploadEndpoint:
         test_file = tmp_path / "upload_test.txt"
         test_file.write_text("content to upload")
 
-        with patch("llm_shell.api.sessions.upload_file") as mock_upload:
+        with patch("llm_shell.services.sftp.upload_file") as mock_upload:
             mock_upload.return_value = {
                 "remote_path": "/remote/path/upload_test.txt",
                 "size": 17,
@@ -218,7 +218,7 @@ class TestUploadEndpoint:
 
         expected_size = test_file.stat().st_size
 
-        with patch("llm_shell.api.sessions.upload_file") as mock_upload:
+        with patch("llm_shell.services.sftp.upload_file") as mock_upload:
             mock_upload.return_value = {
                 "remote_path": "/remote/data/data.csv",
                 "size": expected_size,
@@ -270,7 +270,7 @@ class TestUploadEndpoint:
 
             assert response.status_code == 404
             data = response.json()
-            assert data["error"]["code"] == "NOT_FOUND"
+            assert data["detail"]["error"]["code"] == "NOT_FOUND"
         finally:
             app.dependency_overrides.clear()
 

@@ -227,7 +227,7 @@ export async function importSSHConfig(
 ): Promise<SSHConfigImportResult> {
   return request<SSHConfigImportResult>('/import/ssh-config', {
     method: 'POST',
-    body: JSON.stringify({ selected }),
+    body: JSON.stringify({ labels: selected }),
   });
 }
 
