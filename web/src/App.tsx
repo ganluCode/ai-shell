@@ -4,6 +4,7 @@ import Terminal from './components/Terminal'
 import AiChat from './components/AiChat'
 import Settings from './components/Settings/Settings'
 import Toast from './components/common/Toast'
+import SSHConfigImport from './components/SSHConfigImport/SSHConfigImport'
 import { useUIStore } from './stores/uiStore'
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
       <ServerForm />
       <Settings />
       <Toast />
+      <SSHConfigImport />
     </div>
   )
 }

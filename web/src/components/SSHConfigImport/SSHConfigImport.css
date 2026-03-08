@@ -1,0 +1,311 @@
+.ssh-import-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.ssh-import-modal {
+  background-color: var(--bg-primary, #252526);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 8px;
+  max-width: 560px;
+  width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.ssh-import-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color, #333);
+}
+
+.ssh-import-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+}
+
+.ssh-import-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #cccccc);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.ssh-import-close-btn:hover {
+  background-color: var(--bg-hover, #4c4c4c);
+  color: var(--text-primary, #ffffff);
+}
+
+.ssh-import-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Preview trigger */
+.ssh-import-preview-trigger {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.ssh-import-preview-btn {
+  padding: 12px 24px;
+  background-color: var(--accent-color, #0078d4);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ssh-import-preview-btn:hover {
+  background-color: var(--accent-hover, #106ebe);
+}
+
+.ssh-import-preview-btn:focus-visible {
+  outline: 2px solid var(--accent-color, #0078d4);
+  outline-offset: 2px;
+}
+
+/* Loading state */
+.ssh-import-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--text-secondary, #cccccc);
+  font-size: 14px;
+}
+
+/* Error state */
+.ssh-import-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 0;
+  color: var(--error-color, #f44336);
+}
+
+.ssh-import-error p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.ssh-import-retry-btn {
+  padding: 8px 16px;
+  background-color: var(--bg-tertiary, #3c3c3c);
+  color: var(--text-primary, #ffffff);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ssh-import-retry-btn:hover {
+  background-color: var(--bg-hover, #4c4c4c);
+}
+
+/* Empty state */
+.ssh-import-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--text-secondary, #cccccc);
+  font-size: 14px;
+}
+
+/* Entry list */
+.ssh-import-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ssh-import-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--bg-tertiary, #3c3c3c);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.ssh-import-entry:hover {
+  background-color: var(--bg-hover, #4c4c4c);
+}
+
+.ssh-import-entry.existing {
+  background-color: var(--bg-secondary, #2d2d2d);
+  opacity: 0.6;
+}
+
+.ssh-import-entry.existing:hover {
+  background-color: var(--bg-secondary, #2d2d2d);
+}
+
+/* Checkbox styling */
+.ssh-import-entry-checkbox {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ssh-import-entry-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--accent-color, #0078d4);
+}
+
+.ssh-import-entry-checkbox input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Entry info */
+.ssh-import-entry-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ssh-import-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ssh-import-entry-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+  word-break: break-all;
+}
+
+.ssh-import-entry-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  background-color: var(--bg-secondary, #2d2d2d);
+  color: var(--text-secondary, #cccccc);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.ssh-import-entry-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary, #cccccc);
+}
+
+.ssh-import-entry-host {
+  color: var(--accent-color, #60a5fa);
+}
+
+.ssh-import-entry-username {
+  color: var(--text-secondary, #cccccc);
+}
+
+.ssh-import-entry-username::before {
+  content: '@';
+  margin-right: 0;
+}
+
+.ssh-import-entry-port::before {
+  content: ':';
+  margin-right: 0;
+}
+
+/* Identity file */
+.ssh-import-entry-identity {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.ssh-import-entry-identity-label {
+  color: var(--text-muted, #888888);
+}
+
+.ssh-import-entry-identity-value {
+  color: var(--text-secondary, #cccccc);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+/* Actions */
+.ssh-import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color, #333);
+}
+
+.ssh-import-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ssh-import-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ssh-import-btn-cancel {
+  background-color: var(--bg-tertiary, #3c3c3c);
+  color: var(--text-primary, #ffffff);
+}
+
+.ssh-import-btn-cancel:hover:not(:disabled) {
+  background-color: var(--bg-hover, #4c4c4c);
+}
+
+.ssh-import-btn-confirm {
+  background-color: var(--accent-color, #0078d4);
+  color: #ffffff;
+}
+
+.ssh-import-btn-confirm:hover:not(:disabled) {
+  background-color: var(--accent-hover, #106ebe);
+}
+
+.ssh-import-btn:focus-visible {
+  outline: 2px solid var(--accent-color, #0078d4);
+  outline-offset: 2px;
+}

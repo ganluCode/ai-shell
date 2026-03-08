@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import type { CommandSuggestion, ChatEvent } from '../types'
+import type { CommandSuggestion, ChatEvent, RiskLevel } from '../types'
 
 // ============================================================================
 // Types
@@ -191,7 +191,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
                   const suggestion = {
                     command: evt.command as string,
                     explanation: evt.explanation as string,
-                    risk_level: evt.risk_level as string,
+                    risk_level: evt.risk_level as RiskLevel,
                   }
                   newMessages[newMessages.length - 1] = {
                     ...lastMessage,
@@ -203,11 +203,11 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
                 case 'commands': {
                   // Backend sends {type:"commands", commands: [{command, explanation, risk_level}, ...]}
                   const cmdsEvt = event as Record<string, unknown>
-                  const commands = cmdsEvt.commands as Array<Record<string, string>>
+                  const commands = cmdsEvt.commands as Array<Record<string, unknown>>
                   const suggestions = commands.map((cmd) => ({
-                    command: cmd.command,
-                    explanation: cmd.explanation,
-                    risk_level: cmd.risk_level,
+                    command: cmd.command as string,
+                    explanation: cmd.explanation as string,
+                    risk_level: cmd.risk_level as RiskLevel,
                   }))
                   newMessages[newMessages.length - 1] = {
                     ...lastMessage,
